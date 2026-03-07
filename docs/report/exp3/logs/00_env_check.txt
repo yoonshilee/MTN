@@ -28,3 +28,9 @@ Sat Mar  7 12:55:38 2026
 |    0   N/A  N/A           18656    C+G   ...launcher\AdskAccessUIHost.exe      N/A      |
 |    0   N/A  N/A           20492    C+G   ...Chrome\Application\chrome.exe      N/A      |
 +-----------------------------------------------------------------------------------------+
+
+nvcc: NVIDIA (R) Cuda compiler driver
+Copyright (c) 2005-2025 NVIDIA Corporation
+Built on Fri_Feb_21_20:23:50_PST_2025
+Cuda compilation tools, release 12.8, V12.8.93
+Build cuda_12.8.r12.8/compiler.35583870_0

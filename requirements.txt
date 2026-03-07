@@ -1,3 +1,5 @@
+--extra-index-url https://download.pytorch.org/whl/cu128
+
 tqdm
 rich
 ninja
@@ -10,7 +12,9 @@ opencv-python
 imageio
 imageio-ffmpeg
 
-torch == 1.13.1
+torch == 2.8.0
+torchvision == 0.23.0
+torchaudio == 2.8.0
 torch-ema
 einops
 tensorboard

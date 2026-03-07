@@ -22,7 +22,7 @@
 
 ### 2.1 路径与环境约定
 
-- 项目根目录：`d:\Projects\UM\MTN`
+- 项目根目录：`/home/ubuntu-user/temp/MTN`
 - 建议 Conda 环境名：`MTN`
 - 训练工作目录（workspace 示例）：`trial_baseline`
 
@@ -30,11 +30,8 @@
 
 在项目根目录执行：
 
-```powershell
-New-Item -ItemType Directory -Path .\docs\report\exp3 -Force
-New-Item -ItemType Directory -Path .\docs\report\exp3\logs -Force
-New-Item -ItemType Directory -Path .\docs\report\exp3\screenshots -Force
-New-Item -ItemType Directory -Path .\docs\report\exp3\artifacts -Force
+```bash
+mkdir -p ./docs/report/exp3/{logs,screenshots,artifacts}
 ```
 
 记录要求：
@@ -49,22 +46,20 @@ New-Item -ItemType Directory -Path .\docs\report\exp3\artifacts -Force
 
 可复制执行命令：
 
-```powershell
+```bash
 nvcc -V
 nvidia-smi
 ```
 
 记录内容：
 
-- 按 README 要求确认 `cuda-toolkit` 已正确导出，并能直接执行 `nvcc -V`。
+- 本实验统一以本机环境 `CUDA 12.8 + torch 2.8.0` 为目标环境，先确认当前机器的 `cuda-toolkit` 已正确导出，并能直接执行 `nvcc -V`。
 - GPU 型号、显存总量、驱动版本。
-- 将输出复制到 `docs/report/exp3/logs/00_env_check.txt`。
 
 结果记录模板：
 
-- [ ] 已执行 `nvcc -V`
+- [x] 已执行 `nvcc -V`
 - [x] 已执行 `nvidia-smi`
-- [x] 已保存输出到 `docs/report/exp3/logs/00_env_check.txt`
 - 关键结果记录：
   - CUDA 版本：
   - Driver 版本：
@@ -73,40 +68,46 @@ nvidia-smi
 
 ### 3.2 创建并激活环境（若已完成可跳过）
 
-本节严格按 README 的环境配置整理。若只以 README 为准，则当前 plan 里之前补充的 `torchvision`、`ninja`、`psutil`、`torchmetrics`、`packaging`、`Pillow`、`gpustat` 都不属于 README 原始安装步骤。
+本节仅保留 Ubuntu 环境安装说明，统一使用本机环境 `Python 3.9 + CUDA 12.8 + torch 2.8.0`。
 
-- README 测试环境为：`python 3.9 & torch 1.13 & CUDA 11.5/11.7`。
-- README 要求先确保 `nvcc -V` 可正常执行。
-- README 安装顺序只包含：创建环境、安装 `pytorch==1.13.1`、安装 `gcc/gxx`、进入项目目录、安装 `requirements.txt`。
+- 目标环境：`python 3.9 & torch 2.8.0 & CUDA 12.8`
+- 本机 CUDA 路径：`/usr/local/cuda-12.8`
+- 说明：`torch 1.13.1+cu117` 与本机 CUDA 12.8 不匹配，需改为 `cu128` 版本。
 
 可复制执行命令（项目环境安装）：
 
-```powershell
+```bash
 conda create --name MTN python=3.9 -y
 conda activate MTN
-pip install pytorch==1.13.1
+export CUDA_HOME=/usr/local/cuda-12.8
+export CUDA_PATH=$CUDA_HOME
+export PATH=$CUDA_HOME/bin:$CUDA_HOME/lib64:$PATH
+nvcc -V
+pip uninstall -y torch torchvision torchaudio
+pip install torch==2.8.0 torchvision==0.23.0 torchaudio==2.8.0 --index-url https://download.pytorch.org/whl/cu128
 conda install -c conda-forge gcc=11.2.0 gxx=11.2.0 -y
-git clone https://github.com/Texaser/MTN.git
-cd MTN
-pip install -r requirements.txt --no-build-isolation
+python -m pip install ninja
+pip install gpustat
+grep -v '^torch\s*==' requirements.txt | pip install -r /dev/stdin --no-build-isolation
 ```
 
 记录内容：
 
 - 安装是否成功（成功/失败）。
 - 如失败，记录报错关键词与解决方式。
-- 保存到 `docs/report/exp3/logs/01_install_log.txt`。
 
 结果记录模板：
 
-- [ ] 已执行 `conda create --name MTN python=3.9 -y`
-- [ ] 已执行 `conda activate MTN`
-- [ ] 已执行 `pip install pytorch==1.13.1`
-- [ ] 已执行 `conda install -c conda-forge gcc=11.2.0 gxx=11.2.0 -y`
-- [ ] 已执行 `git clone https://github.com/Texaser/MTN.git`
-- [ ] 已执行 `cd MTN`
-- [ ] 已执行 `pip install -r requirements.txt --no-build-isolation`
-- [ ] 已保存安装日志到 `docs/report/exp3/logs/01_install_log.txt`
+- [x] 已执行 `conda create --name MTN python=3.9 -y`
+- [x] 已执行 `conda activate MTN`
+- [x] 已设置 `CUDA_HOME/CUDA_PATH` 指向本机 CUDA 路径（当前为 `/usr/local/cuda-12.8`）
+- [x] 已执行 `nvcc -V` 并确认输出与本机 CUDA 路径一致
+- [x] 已执行 `pip uninstall -y torch torchvision torchaudio`
+- [x] 已执行 `pip install torch==2.8.0 torchvision==0.23.0 torchaudio==2.8.0 --index-url https://download.pytorch.org/whl/cu128`
+- [x] 已执行 `conda install -c conda-forge gcc=11.2.0 gxx=11.2.0 -y`
+- [x] 已执行 `python -m pip install ninja`
+- [x] 已执行 `pip install gpustat`
+- [x] 已执行 `grep -v '^torch\s*==' requirements.txt | pip install -r /dev/stdin --no-build-isolation`
 - 安装结论：
   - 是否成功（是/否）：
   - 若失败，报错关键词：
@@ -114,40 +115,16 @@ pip install -r requirements.txt --no-build-isolation
 
 说明：
 
-- 若严格按 README，以上命令应原样记录。
-- 若按当前 Windows 机器实际落地，`pip install pytorch==1.13.1` 与 `conda install gcc/gxx` 可能需要后续再按平台修正，但这已超出 README 原始写法。
-
-Windows 补充依赖（非 README 原始步骤，建议在实验记录中单独标注为 Windows-specific）：
-
-- [Windows-specific] Visual Studio 2022 C++ toolchain（确保 `cl.exe` 可用）。
-- [Windows-specific] CUDA Toolkit 11.7（确保 `nvcc -V` 可用，并尽量与 README 的 CUDA 11.7 测试环境对齐）。
-- [Windows-specific] 若 `pip install pytorch==1.13.1` 无法得到可用 CUDA 版本，改为安装与 CUDA 11.7 对应的 PyTorch 轮子。
-- [Windows-specific] 若执行 `pip show gpustat`，则需额外安装 `gpustat`；它不在 README 原始安装步骤中，但在本实验计划后续显存监控步骤中会用到。
-
-可复制执行命令（Windows 补充项，仅在 Windows 实际落地时使用）：
-
-```powershell
-$env:CUDA_HOME = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.7"
-$env:CUDA_PATH = $env:CUDA_HOME
-$env:Path = "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64;$env:CUDA_HOME\bin;$env:CUDA_HOME\libnvvp;" + $env:Path
-where cl.exe
-nvcc -V
-pip install torch==1.13.1 torchvision==0.14.1 --index-url https://download.pytorch.org/whl/cu117
-pip install gpustat
-```
-
-Windows 补充记录模板：
-
-- [ ] [Windows-specific] 已确认 `cl.exe` 可正常执行
-- [ ] [Windows-specific] 已确认 `nvcc -V` 可正常执行
-- [ ] [Windows-specific] 已执行 `pip install torch==1.13.1 torchvision==0.14.1 --index-url https://download.pytorch.org/whl/cu117`
-- [ ] [Windows-specific] 已执行 `pip install gpustat`
+- 本实验统一使用 Ubuntu，本机 `nvcc` 路径为 `/usr/local/cuda-12.8/bin/nvcc`。
+- PyTorch 安装命令使用 `cu128` 轮子。
+- `requirements.txt` 已更新为 `torch==2.8.0`、`torchvision==0.23.0`、`torchaudio==2.8.0`。
+- `gpustat` 已安装，用于后续显存监控与实验记录。
 
 ### 3.3 Python 与关键包版本确认
 
 可复制执行命令：
 
-```powershell
+```bash
 python --version
 python -c "import torch; print(torch.__version__); print(torch.cuda.is_available())"
 pip show gpustat
@@ -157,19 +134,93 @@ pip show gpustat
 
 - Python 版本、Torch 版本、CUDA 可用状态。
 - `gpustat` 版本。
-- 保存到 `docs/report/exp3/logs/02_versions.txt`。
 
 结果记录模板：
 
-- [ ] 已执行 `python --version`
-- [ ] 已执行 `python -c "import torch; print(torch.__version__); print(torch.cuda.is_available())"`
-- [ ] 已执行 `pip show gpustat`
-- [ ] 已保存版本信息到 `docs/report/exp3/logs/02_versions.txt`
+- [x] 已执行 `python --version`
+- [x] 已执行 `python -c "import torch; print(torch.__version__); print(torch.cuda.is_available())"`
+- [x] 已执行 `pip show gpustat`
 - 关键结果记录：
   - Python 版本：
   - Torch 版本：
   - CUDA 可用（True/False）：
   - gpustat 版本：
+
+### 3.4 Hugging Face 权限开通（使用 `--IF` 前必须完成）
+
+若要运行带 `--IF` 的命令，必须先在浏览器中接受 DeepFloyd IF 的使用条款，并在当前 Conda 环境 `MTN` 中完成 Hugging Face 登录。否则会出现 `401 Unauthorized` 或 `GatedRepoError`。
+
+#### 3.4.1 浏览器端接受模型条款
+
+按顺序操作：
+
+1. 打开模型页面：<https://huggingface.co/DeepFloyd/IF-I-XL-v1.0>
+2. 登录你的 Hugging Face 账号。
+3. 在模型页面点击类似 `Access repository`、`Agree and access` 或 `Accept` 的按钮。
+4. 阅读并接受页面中的使用条款。
+5. 确认页面已显示你具有该仓库访问权限。
+
+建议同时检查：
+
+- 账号是否已完成邮箱验证。
+- 页面是否能正常打开 `Files and versions` 标签页。
+- 不要只登录而不点“接受条款”，否则命令行仍会报 `401`。
+
+#### 3.4.2 在现有 `MTN` 环境中登录 Hugging Face
+
+可复制执行命令：
+
+```bash
+conda activate MTN
+python -m pip install -U "huggingface_hub[cli]"
+huggingface-cli login
+```
+
+执行说明：
+
+- 运行 `huggingface-cli login` 后，终端会提示输入 Hugging Face Access Token。
+- Access Token 获取页面：<https://huggingface.co/settings/tokens>
+- 建议新建一个 `read` 权限的 token 即可。
+- 将 token 粘贴到终端后回车，看到 `Login successful` 或类似提示即可。
+
+#### 3.4.3 登录后验证权限
+
+可复制执行命令：
+
+```bash
+conda activate MTN
+huggingface-cli whoami
+python - <<'PY'
+from huggingface_hub import hf_hub_download
+path = hf_hub_download(repo_id="DeepFloyd/IF-I-XL-v1.0", filename="model_index.json")
+print(path)
+PY
+```
+
+验证标准：
+
+- `huggingface-cli whoami` 能返回当前用户名。
+- `hf_hub_download(...)` 不再报 `401 Unauthorized`。
+- 成功打印出本地缓存文件路径，说明 `--IF` 所需权限已准备完成。
+
+若仍失败，按以下顺序排查：
+
+1. 确认浏览器端确实点击并接受了模型条款。
+2. 确认登录的是同一个 Hugging Face 账号。
+3. 重新执行 `huggingface-cli login`。
+4. 如有旧缓存，可执行 `huggingface-cli logout` 后重新登录。
+
+结果记录模板：
+
+- [ ] 已打开 `https://huggingface.co/DeepFloyd/IF-I-XL-v1.0`
+- [ ] 已接受 DeepFloyd IF 使用条款
+- [ ] 已在 `MTN` 环境执行 `huggingface-cli login`
+- [ ] 已执行 `huggingface-cli whoami`
+- [ ] 已执行 `hf_hub_download` 验证下载权限
+- 关键结果记录：
+  - Hugging Face 用户名：
+  - 是否可访问 `DeepFloyd/IF-I-XL-v1.0`（是/否）：
+  - 若失败，报错关键词：
 
 ## 4. 阶段二：基线实验（必做）
 
@@ -177,8 +228,8 @@ pip show gpustat
 
 可复制执行命令：
 
-```powershell
-gpustat --color -i 5 | Tee-Object -FilePath .\docs\report\exp3\logs\10_gpustat_baseline.txt
+```bash
+gpustat --color -i 5 | tee ./docs/report/exp3/logs/10_gpustat_baseline.txt
 ```
 
 记录内容：
@@ -189,9 +240,9 @@ gpustat --color -i 5 | Tee-Object -FilePath .\docs\report\exp3\logs\10_gpustat_b
 
 结果记录模板：
 
-- [ ] 已在独立终端执行 `gpustat --color -i 5 | Tee-Object -FilePath .\docs\report\exp3\logs\10_gpustat_baseline.txt`
-- [ ] 监控终端保持到训练结束
-- [ ] 显存日志文件已生成
+- [x] 已在独立终端执行 `gpustat --color -i 5 | tee ./docs/report/exp3/logs/10_gpustat_baseline.txt`
+- [x] 监控终端保持到训练结束
+- [x] 显存日志文件已生成
 - 记录：
   - 开始时间：
   - 结束时间：
@@ -200,15 +251,19 @@ gpustat --color -i 5 | Tee-Object -FilePath .\docs\report\exp3\logs\10_gpustat_b
 
 ### 4.2 基线训练命令
 
+先决条件：
+
+- 若使用 `--IF`，必须先完成上面的 3.4，否则训练会因 Hugging Face gated repo 权限不足而直接失败。
+
 可复制执行命令：
 
-```powershell
+```bash
 python main.py -O --text "a tiger dressed as a doctor" --workspace trial_baseline --iters 6000 --batch_size 1 --IF --perpneg
 ```
 
 可选（显存不足时）：
 
-```powershell
+```bash
 python main.py -O --text "a tiger dressed as a doctor" --workspace trial_baseline --iters 6000 --batch_size 1 --sd_version 2.1
 ```
 
@@ -238,7 +293,7 @@ python main.py -O --text "a tiger dressed as a doctor" --workspace trial_baselin
 
 可复制执行命令：
 
-```powershell
+```bash
 python main.py --workspace trial_baseline -O --test
 python main.py --workspace trial_baseline -O --test --save_mesh
 ```
@@ -275,7 +330,7 @@ python main.py --workspace trial_baseline -O --test --save_mesh
 - 从基线结果中截取失败视角。
 - 如基线质量较好，可改提示词重训一轮制造失败案例，例如：
 
-```powershell
+```bash
 python main.py -O --text "a zoomed out DSLR photo of a baby bunny sitting on top of a stack of pancakes" --workspace trial_failure_case --iters 6000 --IF --batch_size 1 --perpneg
 ```
 
@@ -336,7 +391,7 @@ python main.py -O --text "a zoomed out DSLR photo of a baby bunny sitting on top
 
 可复制执行命令：
 
-```powershell
+```bash
 python main.py -O --text "a tiger dressed as a doctor" --workspace trial_lr3e4 --iters 6000 --IF --batch_size 1 --perpneg --lr 3e-4
 python main.py -O --text "a tiger dressed as a doctor" --workspace trial_lr5e4 --iters 6000 --IF --batch_size 1 --perpneg --lr 5e-4
 ```
@@ -386,8 +441,8 @@ python main.py -O --text "a tiger dressed as a doctor" --workspace trial_lr5e4 -
 
 可用命令辅助筛选：
 
-```powershell
-Select-String -Path .\docs\report\exp3\logs\10_gpustat_baseline.txt -Pattern "MiB"
+```bash
+grep "MiB" ./docs/report/exp3/logs/10_gpustat_baseline.txt
 ```
 
 记录内容：
