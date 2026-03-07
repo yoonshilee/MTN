@@ -268,35 +268,113 @@ PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a tig
 
 #### 4.2.2 原始高开销 IF 命令（仅在显存稳定时使用）
 
+建议先单独开启显存监控，再运行训练命令。
+
+可复制执行命令（显存监控）：
+
+```bash
+gpustat --color -i 5 | tee ./logs/13_gpustat_if_perpneg.txt
+```
+
+说明：
+
+- 该命令应在独立终端中先启动，并保持到训练结束。
+- 建议把本轮高开销实验的 `gpustat` 日志单独保存，避免和前面的低显存实验混淆。
+
 可复制执行命令：
 
 ```bash
-python main.py -O --text "a tiger dressed as a doctor" --workspace trial_baseline --iters 6000 --batch_size 1 --IF --perpneg
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a tiger dressed as a doctor" --workspace trial_if_perpneg --iters 6000 --batch_size 1 --IF --perpneg
 ```
+
+建议输出位置：
+
+- 显存日志：`./logs/13_gpustat_if_perpneg.txt`
+- 文本日志：`./logs/trial_if_perpneg_log_df.txt`
+- 结构化日志：`./logs/trial_if_perpneg_train_metrics_df.csv`
+- 结果目录：`./trial_if_perpneg/`
 
 记录内容：
 
+- `gpustat` 监控命令与日志路径。
 - 完整命令行。
 - 开始/结束时间、总时长。
 - 是否出现 OOM 或其他错误。
 - 关键日志片段（loss 变化、异常信息）。
 - 自动保存的日志文件路径。
 
-结果记录模板：
+结果记录：
 
-- [x] 已执行基线训练命令
-- [x] 已确认 `./logs/` 下自动生成文本日志
-- [x] 已确认 `./logs/` 下自动生成 CSV 日志
+- [x] 已执行高开销 IF 命令
+- [x] 已生成 `./logs/13_gpustat_if_perpneg.txt`
+- [x] 已生成自动文本日志与 CSV 日志
+- [x] 已确认本轮实验发生 OOM
+- 实验记录：
+  - 实际执行命令：`PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a tiger dressed as a doctor" --workspace trial_if_perpneg --iters 6000 --batch_size 1 --IF --perpneg`
+  - 开始时间：`2026-03-07 22:10:34`
+  - 结束时间：`2026-03-07 22:10:36` 左右
+  - 是否 OOM（是/否）：是
+  - 报错关键词：`torch.OutOfMemoryError: CUDA out of memory`
+  - 触发位置：`guidance/if_utils.py` 中 `train_step_perpneg()` 调用 IF `unet` 前向时显存不足
+  - 直接原因：`--IF --perpneg` 使用默认 `64x64` 且未开启 `--vram_O`，显存占用快速升至约 `22.86 GiB`
+  - `gpustat` 观测：训练启动后显存一度达到约 `14013 MiB / 24564 MiB`，随后训练进程在第 1 个 epoch 的第 4 step 因 OOM 退出；退出后显存回落到系统空闲水平
+  - 文本日志路径：`./logs/trial_if_perpneg_log_df.txt`
+  - 结构化日志路径：`./logs/trial_if_perpneg_train_metrics_df.csv`
+  - 显存监控日志：`./logs/13_gpustat_if_perpneg.txt`
+  - 结论：当前机器不适合直接运行原始 `--IF --perpneg` 配置，应改用降显存版本。
+
+#### 4.2.3 保留 IF + perpneg 的降显存实验（下一步建议）
+
+若仍希望测试 `IF + perpneg`，建议先使用下面的降显存版本，而不要直接回到 4.2.2 的默认设置。
+
+可复制执行命令（显存监控）：
+
+```bash
+gpustat --color -i 5 | tee ./logs/14_gpustat_if_perpneg_lowmem.txt
+```
+
+可复制执行命令（降显存训练）：
+
+```bash
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a tiger dressed as a doctor" --workspace trial_if_perpneg_lowmem --iters 6000 --batch_size 1 --IF --perpneg --vram_O --w 48 --h 48
+```
+
+说明：
+
+- 保留 `--IF --perpneg`，但加入 `--vram_O --w 48 --h 48`，尽量降低显存峰值。
+- 该命令仍然可能比 `trial_if_lowmem` 更吃显存，但比 4.2.2 更有机会跑通。
+- 若仍 OOM，可进一步尝试更保守配置，例如 `--w 40 --h 40`。
+
+建议输出位置：
+
+- 显存日志：`./logs/14_gpustat_if_perpneg_lowmem.txt`
+- 文本日志：`./logs/trial_if_perpneg_lowmem_log_df.txt`
+- 结构化日志：`./logs/trial_if_perpneg_lowmem_train_metrics_df.csv`
+- 结果目录：`./trial_if_perpneg_lowmem/`
+
+结果记录：
+
+- [x] 已执行降显存 `IF + perpneg` 训练
+- [x] 已生成 `./logs/14_gpustat_if_perpneg_lowmem.txt`
+- [x] 已生成自动文本日志与 CSV 日志
+- [x] 已完成测试视频导出
+- [x] 本轮未发生 OOM
 - 训练记录：
-  - 实际执行命令：`PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a tiger dressed as a doctor" --workspace trial_if_lowmem --iters 6000 --batch_size 1 --IF --vram_O --w 48 --h 48`
-  - 开始时间：`2026-03-07 19:20:55`
-  - 结束时间：`2026-03-07 19:36:54`
-  - 总时长：约 `17.77` 分钟
+  - 实际执行命令：`PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a tiger dressed as a doctor" --workspace trial_if_perpneg_lowmem --iters 6000 --batch_size 1 --IF --perpneg --vram_O --w 48 --h 48`
+  - 开始时间：`2026-03-07 22:15:39`
+  - 结束时间：`2026-03-07 23:24:30` 左右（测试导出结束更晚）
+  - 总时长：约 `103.9772` 分钟
   - 是否 OOM（是/否）：否
   - 其他报错：无致命报错；仅有 AMP 弃用警告与 `TORCH_CUDA_ARCH_LIST` 提示
-  - 关键 loss 片段：`avg_loss` 约在 `1.0000 ~ 1.0003`
-  - 文本日志路径：`./logs/trial_if_lowmem_log_df.txt`
-  - 结构化日志路径：`./logs/trial_if_lowmem_train_metrics_df.csv`
+  - 关键 loss 片段：`avg_loss` 基本在 `1.0000 ~ 1.0002`
+  - 文本日志路径：`./logs/trial_if_perpneg_lowmem_log_df.txt`
+  - 结构化日志路径：`./logs/trial_if_perpneg_lowmem_train_metrics_df.csv`
+  - 显存监控日志：`./logs/14_gpustat_if_perpneg_lowmem.txt`
+  - 结果视频路径：`./trial_if_perpneg_lowmem/results/df_ep0060_rgb.mp4`
+  - 深度视频路径：`./trial_if_perpneg_lowmem/results/df_ep0060_depth.mp4`
+  - 法线视频路径：`./trial_if_perpneg_lowmem/results/df_ep0060_normal.mp4`
+  - 显存结论：训练日志显示 GPU 常驻约 `14.0 ~ 15.0GB`，峰值约 `13.8GB`；明显高于不带 `perpneg` 的低显存 IF 基线，但已成功跑通
+  - 结论：`--vram_O --w 48 --h 48` 足以让 `IF + perpneg` 在当前 RTX 4090 上完成训练，但代价是训练和测试时间显著增加。
 
 ### 4.3 导出视频与网格
 
@@ -333,25 +411,51 @@ python main.py --workspace trial_if_lowmem -O --test --save_mesh
   - Multi-view consistency：
 - 简要结论：已完成视频与网格导出，可继续进行主观质量评估与失败案例截图。
 
-### 4.4 下一步
+### 4.4 学习率对比实验（已完成）
 
-1. 先查看 `./trial_if_lowmem/results/df_ep0060_rgb.mp4`，判断是否需要截取失败案例截图。
-2. 若要写显存分析，下一轮实验前重新开启 `gpustat`，保存新的完整日志。
-3. 进行 1 组超参数对比，建议先改学习率：`--lr 3e-4`。
-4. 若结果质量不足，再尝试在当前低显存配置基础上升到 `--w 64 --h 64`，不要直接加回 `--perpneg`。
+本轮已完成 1 组超参数对比实验，在低显存 IF 配置基础上仅修改学习率为 `3e-4`。
 
-推荐下一条命令（学习率对比实验）：
+实际执行命令：
 
 ```bash
-gpustat --color -i 5 | tee ./logs/11_gpustat_lr3e4.txt
 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a tiger dressed as a doctor" --workspace trial_if_lr3e4 --iters 6000 --batch_size 1 --IF --vram_O --w 48 --h 48 --lr 3e-4
 ```
 
-预期输出位置：
+结果记录：
 
-- 文本日志：`./logs/trial_if_lr3e4_log_df.txt`
-- 结构化日志：`./logs/trial_if_lr3e4_train_metrics_df.csv`
-- 结果视频：`./trial_if_lr3e4/results/`
+- [x] 已执行 `trial_if_lr3e4` 训练
+- [x] 已自动生成文本日志
+- [x] 已自动生成 CSV 指标日志
+- [x] 已生成测试结果视频
+- [x] 已生成 `./logs/11_gpustat_lr3e4.txt`
+- 训练记录：
+  - 开始时间：`2026-03-07 19:48:47`
+  - 结束时间：`2026-03-07 20:06:06` 左右
+  - 总时长：约 `17.4350` 分钟
+  - 是否 OOM（是/否）：否
+  - 其他报错：无致命报错；仅有 AMP 弃用警告与 `TORCH_CUDA_ARCH_LIST` 提示
+  - 关键 loss 片段：`avg_loss` 基本稳定在 `1.0000 ~ 1.0001`
+  - 文本日志路径：`./logs/trial_if_lr3e4_log_df.txt`
+  - 结构化日志路径：`./logs/trial_if_lr3e4_train_metrics_df.csv`
+  - 显存监控日志：`./logs/11_gpustat_lr3e4.txt`
+  - 结果视频路径：`./trial_if_lr3e4/results/df_ep0060_rgb.mp4`
+  - 深度视频路径：`./trial_if_lr3e4/results/df_ep0060_depth.mp4`
+  - 法线视频路径：`./trial_if_lr3e4/results/df_ep0060_normal.mp4`
+  - 显存结论：训练日志记录 GPU 约 `11.0GB`，峰值约 `12.0GB`；`gpustat` 训练时段最高约 `13.3GB / 24.6GB`
+
+与 `trial_if_lowmem` 的初步对比：
+
+- 两组实验都未出现 OOM。
+- `trial_if_lr3e4` 总时长约 `17.44` 分钟，和 `trial_if_lowmem` 的 `17.77` 分钟接近。
+- 两组实验显存占用接近，说明本轮仅修改学习率，没有明显增加显存压力。
+- 当前仍需人工查看视频主观质量，再判断 `--lr 3e-4` 是否优于基线。
+
+### 4.5 下一步
+
+1. 查看 `./trial_if_lowmem/results/df_ep0060_rgb.mp4` 与 `./trial_if_lr3e4/results/df_ep0060_rgb.mp4`，做主观质量对比。
+2. 若 `trial_if_lr3e4` 质量更好，可继续执行 `python main.py --workspace trial_if_lr3e4 -O --test --save_mesh` 导出网格。
+3. 补写 `./logs/30_hparam_study.md`，把两组实验整理成对比表。
+4. 从两组视频中各截取 1-2 张代表视角，准备失败案例或质量对比截图。
 
 ## 5. 阶段三：失败模式分析（至少两个案例）
 
@@ -424,8 +528,8 @@ python main.py -O --text "a zoomed out DSLR photo of a baby bunny sitting on top
 可复制执行命令：
 
 ```bash
-python main.py -O --text "a tiger dressed as a doctor" --workspace trial_lr3e4 --iters 6000 --IF --batch_size 1 --perpneg --lr 3e-4
-python main.py -O --text "a tiger dressed as a doctor" --workspace trial_lr5e4 --iters 6000 --IF --batch_size 1 --perpneg --lr 5e-4
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a tiger dressed as a doctor" --workspace trial_if_lr3e4 --iters 6000 --batch_size 1 --IF --vram_O --w 48 --h 48 --lr 3e-4
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a tiger dressed as a doctor" --workspace trial_if_lr5e4 --iters 6000 --batch_size 1 --IF --vram_O --w 48 --h 48 --lr 5e-4
 ```
 
 记录内容：
@@ -440,23 +544,23 @@ python main.py -O --text "a tiger dressed as a doctor" --workspace trial_lr5e4 -
 
 结果记录模板：
 
-- [ ] 已执行 Exp-1 训练
+- [x] 已执行 Exp-1 训练
 - [ ] 已执行 Exp-2 训练
 - [ ] 已保存日志到 `./logs/30_hparam_study.md`
 - 对比命令记录：
-  - Exp-1 Command：
-  - Exp-2 Command：
+  - Exp-1 Command：`PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a tiger dressed as a doctor" --workspace trial_if_lr3e4 --iters 6000 --batch_size 1 --IF --vram_O --w 48 --h 48 --lr 3e-4`
+  - Exp-2 Command：`PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a tiger dressed as a doctor" --workspace trial_if_lr5e4 --iters 6000 --batch_size 1 --IF --vram_O --w 48 --h 48 --lr 5e-4`
 
 ### 6.3 对比表模板
 
 建议记录为：
 
 ```markdown
-| Workspace     | Key Param | Train Time | Peak VRAM | Geometry | Texture | Consistency | Stability | Notes |
-|---------------|-----------|------------|-----------|----------|---------|-------------|-----------|-------|
-| trial_baseline| default   |            |           |          |         |             |           |       |
-| trial_lr3e4   | lr=3e-4   |            |           |          |         |             |           |       |
-| trial_lr5e4   | lr=5e-4   |            |           |          |         |             |           |       |
+| Workspace        | Key Param | Train Time | Peak VRAM | Geometry | Texture | Consistency | Stability | Notes |
+|------------------|-----------|------------|-----------|----------|---------|-------------|-----------|-------|
+| trial_if_lowmem  | default   | 17.77 min  | 12.0 GB   |          |         |             | stable    | low-memory IF baseline |
+| trial_if_lr3e4   | lr=3e-4   | 17.44 min  | 12.0 GB   |          |         |             | stable    | result videos exported |
+| trial_if_lr5e4   | lr=5e-4   |            |           |          |         |             |           | pending |
 ```
 
 ## 7. 阶段五：显存与效率总结
@@ -484,15 +588,15 @@ grep "MiB" ./logs/10_gpustat_baseline.txt
 
 结果记录模板：
 
-- [ ] 已从 `./logs/10_gpustat_baseline.txt` 提取峰值显存
+- [x] 已从训练日志与 `gpustat` 日志提取本轮峰值显存
 - [ ] 已估算平均显存
 - [ ] 已记录显存波动区间
-- [ ] 已完成不同参数设置的显存对比说明
+- [x] 已完成一版不同参数设置的显存对比说明
 - 结果记录：
-  - Baseline Peak VRAM：
-  - Exp-1 Peak VRAM：
-  - Exp-2 Peak VRAM：
-  - 结论：
+  - Baseline Peak VRAM：`12.0GB`（`trial_if_lowmem` 训练日志）
+  - Exp-1 Peak VRAM：`12.0GB`（`trial_if_lr3e4` 训练日志；`gpustat` 训练时段最高约 `13.3GB / 24.6GB`）
+  - Exp-2 Peak VRAM：待补充
+  - 结论：当前低显存 IF 基线与 `lr=3e-4` 对比实验都能稳定控制在 RTX 4090 可承受范围内；单独提高学习率到 `3e-4` 没有带来明显额外显存压力。
 
 ## 8. 报告撰写映射（对应课程要求）
 
@@ -528,9 +632,9 @@ grep "MiB" ./logs/10_gpustat_baseline.txt
 
 ## 10. 最终自检清单
 
-- [ ] 已记录完整基线训练命令与结果。
-- [ ] 已保存显存监控日志。
+- [x] 已记录完整基线训练命令与结果。
+- [x] 已保存显存监控日志。
 - [ ] 已分析至少 2 个失败案例并附截图。
-- [ ] 已完成至少 1 项超参数改动并进行对比。
+- [x] 已完成至少 1 项超参数改动并进行对比。
 - [ ] 已形成可直接用于报告的表格与结论素材。
 
