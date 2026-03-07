@@ -366,13 +366,17 @@ Select-String -Path .\docs\report\exp3\logs\10_gpustat_baseline.txt -Pattern "Mi
 
 - [ ] 已执行基线训练命令
 - 基线命令：
+
 ```powershell
 python main.py -O --text "a tiger dressed as a doctor" --workspace trial_baseline --iters 6000 --batch_size 1 --IF --perpneg
 ```
+
 - [ ] 如显存不足，已改用 SD2.1 命令
+
 ```powershell
 python main.py -O --text "a tiger dressed as a doctor" --workspace trial_baseline --iters 6000 --batch_size 1 --sd_version 2.1
 ```
+
 - [ ] 已保存训练日志到 `docs/report/exp3/logs/11_train_baseline.txt`
 - 训练记录：
   - 实际执行命令：
@@ -497,6 +501,7 @@ python main.py -O --text "a tiger dressed as a doctor" --workspace trial_baselin
 - [ ] 已完成结论与反思
 
 最终提交文件清单：
+
 - [ ] `docs/report/exp3/logs/00_env_check.txt`
 - [ ] `docs/report/exp3/logs/01_install_log.txt`
 - [ ] `docs/report/exp3/logs/02_versions.txt`
