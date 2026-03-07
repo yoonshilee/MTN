@@ -411,6 +411,25 @@ python main.py --workspace trial_if_lowmem -O --test --save_mesh
   - Multi-view consistency：
 - 简要结论：已完成视频与网格导出，可继续进行主观质量评估与失败案例截图。
 
+视频截图要求与辅助脚本：
+
+- 报告中建议加入成功结果截图、失败案例截图和超参数对比截图。
+- 不需要把完整 `trial*/` 目录提交到仓库，但建议保留视频截图作为视觉证据。
+- 可使用 `./scripts/extract_video_screenshots.py` 从导出视频中自动抽取多张代表帧，统一保存到 `./logs/video_screenshots/`。
+
+可复制执行命令：
+
+```bash
+python ./scripts/extract_video_screenshots.py ./trial_if_lowmem/results/df_ep0060_rgb.mp4 --count 4 --skip-first-last --output-dir ./logs/video_screenshots/trial_if_lowmem_rgb
+python ./scripts/extract_video_screenshots.py ./trial_if_lr3e4/results/df_ep0060_rgb.mp4 --count 4 --skip-first-last --output-dir ./logs/video_screenshots/trial_if_lr3e4_rgb
+python ./scripts/extract_video_screenshots.py ./trial_if_perpneg_lowmem/results/df_ep0060_rgb.mp4 --count 4 --skip-first-last --output-dir ./logs/video_screenshots/trial_if_perpneg_lowmem_rgb
+```
+
+输出说明：
+
+- `shot_*.png`：自动导出的截图文件。
+- `_summary.txt`：记录帧号与时间戳，便于在报告中注明截图来源。
+
 ### 4.4 学习率对比实验（已完成）
 
 本轮已完成 1 组超参数对比实验，在低显存 IF 配置基础上仅修改学习率为 `3e-4`。
@@ -455,7 +474,7 @@ PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a tig
 1. 查看 `./trial_if_lowmem/results/df_ep0060_rgb.mp4` 与 `./trial_if_lr3e4/results/df_ep0060_rgb.mp4`，做主观质量对比。
 2. 若 `trial_if_lr3e4` 质量更好，可继续执行 `python main.py --workspace trial_if_lr3e4 -O --test --save_mesh` 导出网格。
 3. 补写 `./logs/30_hparam_study.md`，把两组实验整理成对比表。
-4. 从两组视频中各截取 1-2 张代表视角，准备失败案例或质量对比截图。
+4. 使用 `python ./scripts/extract_video_screenshots.py ...` 从结果视频中抽取代表帧，统一保存到 `./logs/video_screenshots/`，再挑选插入报告。
 
 ## 5. 阶段三：失败模式分析（至少两个案例）
 
@@ -477,6 +496,18 @@ python main.py -O --text "a zoomed out DSLR photo of a baby bunny sitting on top
 - 现象描述：几何塌陷/部件缺失/纹理拉伸/多视角不一致。
 - 可能原因：提示词歧义、学习率不合适、视角采样不足、扩散引导偏差。
 - 截图路径（至少 2 张/案例）保存于 `docs/report/exp3/screenshots/`。
+
+可复制执行命令（为失败分析准备截图）：
+
+```bash
+python ./scripts/extract_video_screenshots.py ./trial_if_lowmem/results/df_ep0060_rgb.mp4 --count 6 --skip-first-last --output-dir ./logs/video_screenshots/failure_trial_if_lowmem
+python ./scripts/extract_video_screenshots.py ./trial_if_perpneg_lowmem/results/df_ep0060_rgb.mp4 --count 6 --skip-first-last --output-dir ./logs/video_screenshots/failure_trial_if_perpneg_lowmem
+```
+
+说明：
+
+- 先在 `./logs/video_screenshots/` 中筛选有缺陷的视角。
+- 再把最终要放进报告的 PNG 复制到 `./docs/report/exp3/screenshots/`。
 
 结果记录模板：
 

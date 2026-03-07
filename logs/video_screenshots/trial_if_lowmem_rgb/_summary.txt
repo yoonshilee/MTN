@@ -1,0 +1,8 @@
+video=/home/ubuntu-user/temp/MTN/trial_if_lowmem/results/df_ep0060_rgb.mp4
+fps=25.0
+frame_count=100
+saved_count=4
+shot_01_frame00001.png,frame=1,time_sec=0.040
+shot_02_frame00033.png,frame=33,time_sec=1.320
+shot_03_frame00066.png,frame=66,time_sec=2.640
+shot_04_frame00098.png,frame=98,time_sec=3.920
