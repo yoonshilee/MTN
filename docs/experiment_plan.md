@@ -31,12 +31,12 @@
 在项目根目录执行：
 
 ```bash
-mkdir -p ./docs/report/exp3/{logs,screenshots,artifacts}
+mkdir -p ./logs ./docs/report/exp3/{screenshots,artifacts}
 ```
 
 记录要求：
 
-- `logs/`：保存环境信息、命令、终端输出、显存日志。
+- `./logs/`：保存环境信息、训练日志、CSV 指标日志、显存日志。
 - `screenshots/`：保存训练过程与结果截图（失败案例必须有图）。
 - `artifacts/`：保存导出视频/网格的索引说明。
 
@@ -160,11 +160,7 @@ pip show gpustat
 4. 阅读并接受页面中的使用条款。
 5. 确认页面已显示你具有该仓库访问权限。
 
-建议同时检查：
-
-- 账号是否已完成邮箱验证。
-- 页面是否能正常打开 `Files and versions` 标签页。
-- 不要只登录而不点“接受条款”，否则命令行仍会报 `401`。
+补充：不要只登录而不点“接受条款”，否则命令行仍会报 `401`。
 
 #### 3.4.2 在现有 `MTN` 环境中登录 Hugging Face
 
@@ -172,16 +168,15 @@ pip show gpustat
 
 ```bash
 conda activate MTN
-python -m pip install -U "huggingface_hub[cli]"
-huggingface-cli login
+python -m pip install --force-reinstall --no-deps "huggingface_hub==0.25.0"
+python -m huggingface_hub.commands.huggingface_cli login
 ```
 
-执行说明：
+说明：
 
-- 运行 `huggingface-cli login` 后，终端会提示输入 Hugging Face Access Token。
+- 不要执行 `python -m pip install -U "huggingface_hub[cli]"`，否则会把 `huggingface_hub` 升到与当前项目不兼容的版本。
 - Access Token 获取页面：<https://huggingface.co/settings/tokens>
-- 建议新建一个 `read` 权限的 token 即可。
-- 将 token 粘贴到终端后回车，看到 `Login successful` 或类似提示即可。
+- 使用 `read` 权限 token 即可。
 
 #### 3.4.3 登录后验证权限
 
@@ -189,7 +184,7 @@ huggingface-cli login
 
 ```bash
 conda activate MTN
-huggingface-cli whoami
+python -m huggingface_hub.commands.huggingface_cli whoami
 python - <<'PY'
 from huggingface_hub import hf_hub_download
 path = hf_hub_download(repo_id="DeepFloyd/IF-I-XL-v1.0", filename="model_index.json")
@@ -199,24 +194,18 @@ PY
 
 验证标准：
 
-- `huggingface-cli whoami` 能返回当前用户名。
-- `hf_hub_download(...)` 不再报 `401 Unauthorized`。
-- 成功打印出本地缓存文件路径，说明 `--IF` 所需权限已准备完成。
+- `python -m huggingface_hub.commands.huggingface_cli whoami` 能返回当前用户名。
+- `hf_hub_download(...)` 能打印本地缓存路径。
 
-若仍失败，按以下顺序排查：
-
-1. 确认浏览器端确实点击并接受了模型条款。
-2. 确认登录的是同一个 Hugging Face 账号。
-3. 重新执行 `huggingface-cli login`。
-4. 如有旧缓存，可执行 `huggingface-cli logout` 后重新登录。
+若仍失败：重新确认条款已接受、账号一致，再重新登录。
 
 结果记录模板：
 
-- [ ] 已打开 `https://huggingface.co/DeepFloyd/IF-I-XL-v1.0`
-- [ ] 已接受 DeepFloyd IF 使用条款
-- [ ] 已在 `MTN` 环境执行 `huggingface-cli login`
-- [ ] 已执行 `huggingface-cli whoami`
-- [ ] 已执行 `hf_hub_download` 验证下载权限
+- [x] 已打开 `https://huggingface.co/DeepFloyd/IF-I-XL-v1.0`
+- [x] 已接受 DeepFloyd IF 使用条款
+- [x] 已在 `MTN` 环境执行 `python -m huggingface_hub.commands.huggingface_cli login`
+- [x] 已执行 `python -m huggingface_hub.commands.huggingface_cli whoami`
+- [x] 已执行 `hf_hub_download` 验证下载权限
 - 关键结果记录：
   - Hugging Face 用户名：
   - 是否可访问 `DeepFloyd/IF-I-XL-v1.0`（是/否）：
@@ -229,7 +218,7 @@ PY
 可复制执行命令：
 
 ```bash
-gpustat --color -i 5 | tee ./docs/report/exp3/logs/10_gpustat_baseline.txt
+gpustat --color -i 5 | tee ./logs/10_gpustat_baseline.txt
 ```
 
 记录内容：
@@ -240,31 +229,49 @@ gpustat --color -i 5 | tee ./docs/report/exp3/logs/10_gpustat_baseline.txt
 
 结果记录模板：
 
-- [x] 已在独立终端执行 `gpustat --color -i 5 | tee ./docs/report/exp3/logs/10_gpustat_baseline.txt`
-- [x] 监控终端保持到训练结束
+- [x] 已在独立终端执行 `gpustat --color -i 5 | tee ./logs/10_gpustat_baseline.txt`
+- [ ] 监控终端完整保持到训练结束
 - [x] 显存日志文件已生成
 - 记录：
-  - 开始时间：
-  - 结束时间：
-  - 是否中断（是/否）：
-  - 中断原因（如有）：
+  - 开始时间：已执行
+  - 结束时间：手动结束
+  - 是否中断（是/否）：是
+  - 中断原因（如有）：当前 `./logs/10_gpustat_baseline.txt` 不是本次 `trial_if_lowmem` 的完整监控日志；后续超参数实验前建议重新启动一次独立监控。
 
 ### 4.2 基线训练命令
 
 先决条件：
 
 - 若使用 `--IF`，必须先完成上面的 3.4，否则训练会因 Hugging Face gated repo 权限不足而直接失败。
+- 若机器曾因高显存占用自动关机，先用下面的低显存 IF 命令，不要直接运行 `--IF --perpneg`。
+
+#### 4.2.1 推荐低显存 IF 命令（优先使用）
+
+可复制执行命令：
+
+```bash
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a tiger dressed as a doctor" --workspace trial_if_lowmem --iters 6000 --batch_size 1 --IF --vram_O --w 48 --h 48
+```
+
+说明：
+
+- 保留 `--IF`，但去掉 `--perpneg`，显存压力会明显低于原命令。
+- `--vram_O` 用空间换速度，可进一步降低显存峰值。
+- `--w 48 --h 48` 会比默认 `64x64` 更省显存。
+- 若该命令稳定，再尝试更高分辨率或加入 `--perpneg`。
+
+自动日志保存：
+
+- 文本日志：`./logs/trial_if_lowmem_log_df.txt`
+- 结构化日志：`./logs/trial_if_lowmem_train_metrics_df.csv`
+- TensorBoard：`./logs/tensorboard/trial_if_lowmem/df/`
+
+#### 4.2.2 原始高开销 IF 命令（仅在显存稳定时使用）
 
 可复制执行命令：
 
 ```bash
 python main.py -O --text "a tiger dressed as a doctor" --workspace trial_baseline --iters 6000 --batch_size 1 --IF --perpneg
-```
-
-可选（显存不足时）：
-
-```bash
-python main.py -O --text "a tiger dressed as a doctor" --workspace trial_baseline --iters 6000 --batch_size 1 --sd_version 2.1
 ```
 
 记录内容：
@@ -273,29 +280,31 @@ python main.py -O --text "a tiger dressed as a doctor" --workspace trial_baselin
 - 开始/结束时间、总时长。
 - 是否出现 OOM 或其他错误。
 - 关键日志片段（loss 变化、异常信息）。
-- 保存到 `docs/report/exp3/logs/11_train_baseline.txt`。
+- 自动保存的日志文件路径。
 
 结果记录模板：
 
-- [ ] 已执行基线训练命令
-- [ ] 如显存不足，已改用 SD2.1 命令
-- [ ] 已保存训练日志到 `docs/report/exp3/logs/11_train_baseline.txt`
+- [x] 已执行基线训练命令
+- [x] 已确认 `./logs/` 下自动生成文本日志
+- [x] 已确认 `./logs/` 下自动生成 CSV 日志
 - 训练记录：
-  - 实际执行命令：
-  - 开始时间：
-  - 结束时间：
-  - 总时长：
-  - 是否 OOM（是/否）：
-  - 其他报错：
-  - 关键 loss 片段：
+  - 实际执行命令：`PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a tiger dressed as a doctor" --workspace trial_if_lowmem --iters 6000 --batch_size 1 --IF --vram_O --w 48 --h 48`
+  - 开始时间：`2026-03-07 19:20:55`
+  - 结束时间：`2026-03-07 19:36:54`
+  - 总时长：约 `17.77` 分钟
+  - 是否 OOM（是/否）：否
+  - 其他报错：无致命报错；仅有 AMP 弃用警告与 `TORCH_CUDA_ARCH_LIST` 提示
+  - 关键 loss 片段：`avg_loss` 约在 `1.0000 ~ 1.0003`
+  - 文本日志路径：`./logs/trial_if_lowmem_log_df.txt`
+  - 结构化日志路径：`./logs/trial_if_lowmem_train_metrics_df.csv`
 
 ### 4.3 导出视频与网格
 
 可复制执行命令：
 
 ```bash
-python main.py --workspace trial_baseline -O --test
-python main.py --workspace trial_baseline -O --test --save_mesh
+python main.py --workspace trial_if_lowmem -O --test
+python main.py --workspace trial_if_lowmem -O --test --save_mesh
 ```
 
 记录内容：
@@ -303,23 +312,46 @@ python main.py --workspace trial_baseline -O --test --save_mesh
 - 生成文件路径与文件大小。
 - 视频主观质量描述（几何完整度、纹理清晰度、多视角一致性）。
 - 网格质量描述（孔洞、噪声面、纹理错位）。
-- 保存到 `docs/report/exp3/logs/12_export_baseline.txt`。
+- 保存到 `./logs/12_export_baseline.txt`。
 
 结果记录模板：
 
-- [ ] 已执行 `python main.py --workspace trial_baseline -O --test`
-- [ ] 已执行 `python main.py --workspace trial_baseline -O --test --save_mesh`
-- [ ] 已保存导出记录到 `docs/report/exp3/logs/12_export_baseline.txt`
+- [x] 已执行测试导出（训练结束后自动完成）
+- [x] 已执行 `python main.py --workspace trial_if_lowmem -O --test --save_mesh`
+- [ ] 已保存导出记录到 `./logs/12_export_baseline.txt`
 - 文件记录：
-  - 视频路径：
-  - 视频大小：
-  - 网格路径：
-  - 网格大小：
+  - 视频路径：`./trial_if_lowmem/results/df_ep0060_rgb.mp4`
+  - 深度视频路径：`./trial_if_lowmem/results/df_ep0060_depth.mp4`
+  - 法线视频路径：`./trial_if_lowmem/results/df_ep0060_normal.mp4`
+  - 网格路径：`./trial_if_lowmem/mesh/mesh.obj`
+  - 材质路径：`./trial_if_lowmem/mesh/mesh.mtl`
+  - 贴图路径：`./trial_if_lowmem/mesh/albedo.png`
+  - 网格规模：`15022` vertices, `30056` faces
 - 质量评分（1-5）：
   - Geometry：
   - Texture：
   - Multi-view consistency：
-- 简要结论：
+- 简要结论：已完成视频与网格导出，可继续进行主观质量评估与失败案例截图。
+
+### 4.4 下一步
+
+1. 先查看 `./trial_if_lowmem/results/df_ep0060_rgb.mp4`，判断是否需要截取失败案例截图。
+2. 若要写显存分析，下一轮实验前重新开启 `gpustat`，保存新的完整日志。
+3. 进行 1 组超参数对比，建议先改学习率：`--lr 3e-4`。
+4. 若结果质量不足，再尝试在当前低显存配置基础上升到 `--w 64 --h 64`，不要直接加回 `--perpneg`。
+
+推荐下一条命令（学习率对比实验）：
+
+```bash
+gpustat --color -i 5 | tee ./logs/11_gpustat_lr3e4.txt
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a tiger dressed as a doctor" --workspace trial_if_lr3e4 --iters 6000 --batch_size 1 --IF --vram_O --w 48 --h 48 --lr 3e-4
+```
+
+预期输出位置：
+
+- 文本日志：`./logs/trial_if_lr3e4_log_df.txt`
+- 结构化日志：`./logs/trial_if_lr3e4_train_metrics_df.csv`
+- 结果视频：`./trial_if_lr3e4/results/`
 
 ## 5. 阶段三：失败模式分析（至少两个案例）
 
@@ -359,7 +391,7 @@ python main.py -O --text "a zoomed out DSLR photo of a baby bunny sitting on top
 
 ### 5.2 失败分析记录模板
 
-建议在 `docs/report/exp3/logs/20_failure_analysis.md` 写入：
+建议在 `./logs/20_failure_analysis.md` 写入：
 
 ```markdown
 ## F1
@@ -404,13 +436,13 @@ python main.py -O --text "a tiger dressed as a doctor" --workspace trial_lr5e4 -
   - 纹理真实性
   - 多视角一致性
   - 收敛稳定性
-- 保存到 `docs/report/exp3/logs/30_hparam_study.md`。
+- 保存到 `./logs/30_hparam_study.md`。
 
 结果记录模板：
 
 - [ ] 已执行 Exp-1 训练
 - [ ] 已执行 Exp-2 训练
-- [ ] 已保存日志到 `docs/report/exp3/logs/30_hparam_study.md`
+- [ ] 已保存日志到 `./logs/30_hparam_study.md`
 - 对比命令记录：
   - Exp-1 Command：
   - Exp-2 Command：
@@ -433,7 +465,7 @@ python main.py -O --text "a tiger dressed as a doctor" --workspace trial_lr5e4 -
 
 可复制执行命令：
 
-从 `10_gpustat_baseline.txt` 与对比实验日志提取：
+从 `./logs/10_gpustat_baseline.txt` 与对比实验日志提取：
 
 - 峰值显存。
 - 平均显存（可粗略按关键时段估计）。
@@ -442,7 +474,7 @@ python main.py -O --text "a tiger dressed as a doctor" --workspace trial_lr5e4 -
 可用命令辅助筛选：
 
 ```bash
-grep "MiB" ./docs/report/exp3/logs/10_gpustat_baseline.txt
+grep "MiB" ./logs/10_gpustat_baseline.txt
 ```
 
 记录内容：
@@ -452,7 +484,7 @@ grep "MiB" ./docs/report/exp3/logs/10_gpustat_baseline.txt
 
 结果记录模板：
 
-- [ ] 已从 `10_gpustat_baseline.txt` 提取峰值显存
+- [ ] 已从 `./logs/10_gpustat_baseline.txt` 提取峰值显存
 - [ ] 已估算平均显存
 - [ ] 已记录显存波动区间
 - [ ] 已完成不同参数设置的显存对比说明

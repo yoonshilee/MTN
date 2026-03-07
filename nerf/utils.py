@@ -1,4 +1,5 @@
 import os
+import csv
 import gc
 import glob
 import tqdm
@@ -310,10 +311,33 @@ class Trainer(object):
 
         # workspace prepare
         self.log_ptr = None
+        self.train_metrics_path = None
+        self.logs_root = str(Path(__file__).resolve().parent.parent / 'logs')
+        self.workspace_log_name = None
+        self.tensorboard_path = None
         if self.workspace is not None:
             os.makedirs(self.workspace, exist_ok=True)
-            self.log_path = os.path.join(workspace, f"log_{self.name}.txt")
+            os.makedirs(self.logs_root, exist_ok=True)
+            self.workspace_log_name = os.path.basename(os.path.abspath(self.workspace))
+            self.log_path = os.path.join(self.logs_root, f"{self.workspace_log_name}_log_{self.name}.txt")
             self.log_ptr = open(self.log_path, "a+")
+            self.train_metrics_path = os.path.join(self.logs_root, f"{self.workspace_log_name}_train_metrics_{self.name}.csv")
+            self.tensorboard_path = os.path.join(self.logs_root, 'tensorboard', self.workspace_log_name, self.name)
+            if not os.path.exists(self.train_metrics_path):
+                with open(self.train_metrics_path, "w", newline="") as f:
+                    writer = csv.writer(f)
+                    writer.writerow([
+                        "timestamp",
+                        "epoch",
+                        "global_step",
+                        "local_step",
+                        "loss",
+                        "avg_loss",
+                        "lr",
+                        "cpu_mem_gb",
+                        "gpu_mem_gb",
+                        "gpu_peak_mem_gb",
+                    ])
 
             self.ckpt_path = os.path.join(self.workspace, 'checkpoints')
             self.best_path = f"{self.ckpt_path}/{self.name}.pth"
@@ -332,6 +356,11 @@ class Trainer(object):
         self.log(f'[INFO] opt: {self.opt}')
         self.log(f'[INFO] Trainer: {self.name} | {self.time_stamp} | {self.device} | {"fp16" if self.fp16 else "fp32"} | {self.workspace}')
         self.log(f'[INFO] #parameters: {sum([p.numel() for p in model.parameters() if p.requires_grad])}')
+        if self.workspace is not None:
+            self.log(f'[INFO] Central logs directory: {self.logs_root}')
+            self.log(f'[INFO] Text log will be saved to {self.log_path}')
+            self.log(f'[INFO] Step metrics will be saved to {self.train_metrics_path}')
+            self.log(f'[INFO] TensorBoard log will be saved to {self.tensorboard_path}')
 
         if self.workspace is not None:
             if self.use_checkpoint == "scratch":
@@ -438,6 +467,39 @@ class Trainer(object):
             if self.log_ptr:
                 print(*args, file=self.log_ptr)
                 self.log_ptr.flush() # write immediately to file
+
+    def _get_primary_gpu_mem(self):
+        if not torch.cuda.is_available():
+            return 0.0
+        _, mems = get_GPU_mem()
+        if len(mems) == 0:
+            return 0.0
+        index = min(self.local_rank, len(mems) - 1)
+        return mems[index]
+
+    def _get_primary_gpu_peak_mem(self):
+        if not torch.cuda.is_available():
+            return 0.0
+        return torch.cuda.max_memory_allocated(self.device) / 1024**3
+
+    def _append_train_metric(self, loss_val, average_loss):
+        if self.train_metrics_path is None or self.local_rank != 0:
+            return
+
+        with open(self.train_metrics_path, "a", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                time.strftime('%Y-%m-%d_%H-%M-%S'),
+                self.epoch,
+                self.global_step,
+                self.local_step,
+                f"{loss_val:.6f}",
+                f"{average_loss:.6f}",
+                f"{self.optimizer.param_groups[0]['lr']:.6f}",
+                f"{get_CPU_mem():.3f}",
+                f"{self._get_primary_gpu_mem():.3f}",
+                f"{self._get_primary_gpu_peak_mem():.3f}",
+            ])
 
     ### ------------------------------
 
@@ -846,7 +908,8 @@ class Trainer(object):
         #     self.model, self.optimizer, train_loader, self.lr_scheduler
         # )
         if self.use_tensorboardX and self.local_rank == 0:
-            self.writer = tensorboardX.SummaryWriter(os.path.join(self.workspace, "run", self.name))
+            os.makedirs(self.tensorboard_path, exist_ok=True)
+            self.writer = tensorboardX.SummaryWriter(self.tensorboard_path)
 
         start_t = time.time()
 
@@ -1056,6 +1119,8 @@ class Trainer(object):
         return outputs
 
     def train_one_epoch(self, loader, max_epochs):
+        if torch.cuda.is_available():
+            torch.cuda.reset_peak_memory_stats(self.device)
         if self.global_step < self.warm_step:
             for i in range(len(self.optimizer.param_groups)):
                 self.optimizer.param_groups[i]['lr'] = self.warmup_lr_schedule[i][self.global_step]
@@ -1127,6 +1192,8 @@ class Trainer(object):
 
             loss_val = loss.item()
             total_loss += loss_val
+            average_loss = total_loss / self.local_step
+            self._append_train_metric(loss_val, average_loss)
 
             if self.local_rank == 0:
                 # if self.report_metric_at_train:
@@ -1138,9 +1205,9 @@ class Trainer(object):
                     self.writer.add_scalar("train/lr", self.optimizer.param_groups[0]['lr'], self.global_step)
 
                 if self.scheduler_update_every_step:
-                    pbar.set_description(f"loss={loss_val:.4f} ({total_loss/self.local_step:.4f}), lr={self.optimizer.param_groups[0]['lr']:.6f}")
+                    pbar.set_description(f"loss={loss_val:.4f} ({average_loss:.4f}), lr={self.optimizer.param_groups[0]['lr']:.6f}")
                 else:
-                    pbar.set_description(f"loss={loss_val:.4f} ({total_loss/self.local_step:.4f})")
+                    pbar.set_description(f"loss={loss_val:.4f} ({average_loss:.4f})")
                 pbar.update(1)
 
         if self.ema is not None:
@@ -1164,8 +1231,10 @@ class Trainer(object):
             else:
                 self.lr_scheduler.step()
 
-        cpu_mem, gpu_mem = get_CPU_mem(), get_GPU_mem()[0]
-        self.log(f"==> [{time.strftime('%Y-%m-%d_%H-%M-%S')}] Finished Epoch {self.epoch}/{max_epochs}. CPU={cpu_mem:.1f}GB, GPU={gpu_mem:.1f}GB.")
+        cpu_mem = get_CPU_mem()
+        gpu_mem = self._get_primary_gpu_mem()
+        gpu_peak_mem = self._get_primary_gpu_peak_mem()
+        self.log(f"==> [{time.strftime('%Y-%m-%d_%H-%M-%S')}] Finished Epoch {self.epoch}/{max_epochs}. avg_loss={average_loss:.4f}, lr={self.optimizer.param_groups[0]['lr']:.6f}, CPU={cpu_mem:.1f}GB, GPU={gpu_mem:.1f}GB, Peak_GPU={gpu_peak_mem:.1f}GB.")
 
 
     def evaluate_one_epoch(self, loader, name=None):
