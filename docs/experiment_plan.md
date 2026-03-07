@@ -47,7 +47,7 @@ New-Item -ItemType Directory -Path .\docs\report\exp3\artifacts -Force
 
 ### 3.1 CUDA 与基础环境检查
 
-执行命令：
+可复制执行命令：
 
 ```powershell
 nvcc -V
@@ -56,21 +56,39 @@ nvidia-smi
 
 记录内容：
 
-- CUDA 版本号（例如 `release 12.8`）。
+- 按 README 要求确认 `cuda-toolkit` 已正确导出，并能直接执行 `nvcc -V`。
 - GPU 型号、显存总量、驱动版本。
 - 将输出复制到 `docs/report/exp3/logs/00_env_check.txt`。
 
+结果记录模板：
+
+- [ ] 已执行 `nvcc -V`
+- [x] 已执行 `nvidia-smi`
+- [x] 已保存输出到 `docs/report/exp3/logs/00_env_check.txt`
+- 关键结果记录：
+  - CUDA 版本：
+  - Driver 版本：
+  - GPU 型号：
+  - 显存总量：
+
 ### 3.2 创建并激活环境（若已完成可跳过）
 
-执行命令：
+本节严格按 README 的环境配置整理。若只以 README 为准，则当前 plan 里之前补充的 `torchvision`、`ninja`、`psutil`、`torchmetrics`、`packaging`、`Pillow`、`gpustat` 都不属于 README 原始安装步骤。
+
+- README 测试环境为：`python 3.9 & torch 1.13 & CUDA 11.5/11.7`。
+- README 要求先确保 `nvcc -V` 可正常执行。
+- README 安装顺序只包含：创建环境、安装 `pytorch==1.13.1`、安装 `gcc/gxx`、进入项目目录、安装 `requirements.txt`。
+
+可复制执行命令（项目环境安装）：
 
 ```powershell
 conda create --name MTN python=3.9 -y
 conda activate MTN
-pip install torch==1.13.1
+pip install pytorch==1.13.1
 conda install -c conda-forge gcc=11.2.0 gxx=11.2.0 -y
+git clone https://github.com/Texaser/MTN.git
+cd MTN
 pip install -r requirements.txt --no-build-isolation
-pip install gpustat
 ```
 
 记录内容：
@@ -79,9 +97,55 @@ pip install gpustat
 - 如失败，记录报错关键词与解决方式。
 - 保存到 `docs/report/exp3/logs/01_install_log.txt`。
 
+结果记录模板：
+
+- [ ] 已执行 `conda create --name MTN python=3.9 -y`
+- [ ] 已执行 `conda activate MTN`
+- [ ] 已执行 `pip install pytorch==1.13.1`
+- [ ] 已执行 `conda install -c conda-forge gcc=11.2.0 gxx=11.2.0 -y`
+- [ ] 已执行 `git clone https://github.com/Texaser/MTN.git`
+- [ ] 已执行 `cd MTN`
+- [ ] 已执行 `pip install -r requirements.txt --no-build-isolation`
+- [ ] 已保存安装日志到 `docs/report/exp3/logs/01_install_log.txt`
+- 安装结论：
+  - 是否成功（是/否）：
+  - 若失败，报错关键词：
+  - 解决方法：
+
+说明：
+
+- 若严格按 README，以上命令应原样记录。
+- 若按当前 Windows 机器实际落地，`pip install pytorch==1.13.1` 与 `conda install gcc/gxx` 可能需要后续再按平台修正，但这已超出 README 原始写法。
+
+Windows 补充依赖（非 README 原始步骤，建议在实验记录中单独标注为 Windows-specific）：
+
+- [Windows-specific] Visual Studio 2022 C++ toolchain（确保 `cl.exe` 可用）。
+- [Windows-specific] CUDA Toolkit 11.7（确保 `nvcc -V` 可用，并尽量与 README 的 CUDA 11.7 测试环境对齐）。
+- [Windows-specific] 若 `pip install pytorch==1.13.1` 无法得到可用 CUDA 版本，改为安装与 CUDA 11.7 对应的 PyTorch 轮子。
+- [Windows-specific] 若执行 `pip show gpustat`，则需额外安装 `gpustat`；它不在 README 原始安装步骤中，但在本实验计划后续显存监控步骤中会用到。
+
+可复制执行命令（Windows 补充项，仅在 Windows 实际落地时使用）：
+
+```powershell
+$env:CUDA_HOME = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.7"
+$env:CUDA_PATH = $env:CUDA_HOME
+$env:Path = "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64;$env:CUDA_HOME\bin;$env:CUDA_HOME\libnvvp;" + $env:Path
+where cl.exe
+nvcc -V
+pip install torch==1.13.1 torchvision==0.14.1 --index-url https://download.pytorch.org/whl/cu117
+pip install gpustat
+```
+
+Windows 补充记录模板：
+
+- [ ] [Windows-specific] 已确认 `cl.exe` 可正常执行
+- [ ] [Windows-specific] 已确认 `nvcc -V` 可正常执行
+- [ ] [Windows-specific] 已执行 `pip install torch==1.13.1 torchvision==0.14.1 --index-url https://download.pytorch.org/whl/cu117`
+- [ ] [Windows-specific] 已执行 `pip install gpustat`
+
 ### 3.3 Python 与关键包版本确认
 
-执行命令：
+可复制执行命令：
 
 ```powershell
 python --version
@@ -95,11 +159,23 @@ pip show gpustat
 - `gpustat` 版本。
 - 保存到 `docs/report/exp3/logs/02_versions.txt`。
 
+结果记录模板：
+
+- [ ] 已执行 `python --version`
+- [ ] 已执行 `python -c "import torch; print(torch.__version__); print(torch.cuda.is_available())"`
+- [ ] 已执行 `pip show gpustat`
+- [ ] 已保存版本信息到 `docs/report/exp3/logs/02_versions.txt`
+- 关键结果记录：
+  - Python 版本：
+  - Torch 版本：
+  - CUDA 可用（True/False）：
+  - gpustat 版本：
+
 ## 4. 阶段二：基线实验（必做）
 
 ### 4.1 启动显存监控（训练前）
 
-新开一个终端，在项目根目录执行：
+可复制执行命令：
 
 ```powershell
 gpustat --color -i 5 | Tee-Object -FilePath .\docs\report\exp3\logs\10_gpustat_baseline.txt
@@ -111,9 +187,20 @@ gpustat --color -i 5 | Tee-Object -FilePath .\docs\report\exp3\logs\10_gpustat_b
 - 监控间隔建议 5 秒。
 - 若中断，记录中断时间与原因。
 
+结果记录模板：
+
+- [ ] 已在独立终端执行 `gpustat --color -i 5 | Tee-Object -FilePath .\docs\report\exp3\logs\10_gpustat_baseline.txt`
+- [ ] 监控终端保持到训练结束
+- [ ] 显存日志文件已生成
+- 记录：
+  - 开始时间：
+  - 结束时间：
+  - 是否中断（是/否）：
+  - 中断原因（如有）：
+
 ### 4.2 基线训练命令
 
-在另一个终端执行（示例提示词与 README 对齐）：
+可复制执行命令：
 
 ```powershell
 python main.py -O --text "a tiger dressed as a doctor" --workspace trial_baseline --iters 6000 --batch_size 1 --IF --perpneg
@@ -133,9 +220,23 @@ python main.py -O --text "a tiger dressed as a doctor" --workspace trial_baselin
 - 关键日志片段（loss 变化、异常信息）。
 - 保存到 `docs/report/exp3/logs/11_train_baseline.txt`。
 
+结果记录模板：
+
+- [ ] 已执行基线训练命令
+- [ ] 如显存不足，已改用 SD2.1 命令
+- [ ] 已保存训练日志到 `docs/report/exp3/logs/11_train_baseline.txt`
+- 训练记录：
+  - 实际执行命令：
+  - 开始时间：
+  - 结束时间：
+  - 总时长：
+  - 是否 OOM（是/否）：
+  - 其他报错：
+  - 关键 loss 片段：
+
 ### 4.3 导出视频与网格
 
-训练结束后执行：
+可复制执行命令：
 
 ```powershell
 python main.py --workspace trial_baseline -O --test
@@ -149,11 +250,27 @@ python main.py --workspace trial_baseline -O --test --save_mesh
 - 网格质量描述（孔洞、噪声面、纹理错位）。
 - 保存到 `docs/report/exp3/logs/12_export_baseline.txt`。
 
+结果记录模板：
+
+- [ ] 已执行 `python main.py --workspace trial_baseline -O --test`
+- [ ] 已执行 `python main.py --workspace trial_baseline -O --test --save_mesh`
+- [ ] 已保存导出记录到 `docs/report/exp3/logs/12_export_baseline.txt`
+- 文件记录：
+  - 视频路径：
+  - 视频大小：
+  - 网格路径：
+  - 网格大小：
+- 质量评分（1-5）：
+  - Geometry：
+  - Texture：
+  - Multi-view consistency：
+- 简要结论：
+
 ## 5. 阶段三：失败模式分析（至少两个案例）
 
 ### 5.1 失败案例采集方法
 
-执行建议：
+可复制执行命令（失败案例示例）：
 
 - 从基线结果中截取失败视角。
 - 如基线质量较好，可改提示词重训一轮制造失败案例，例如：
@@ -169,6 +286,21 @@ python main.py -O --text "a zoomed out DSLR photo of a baby bunny sitting on top
 - 现象描述：几何塌陷/部件缺失/纹理拉伸/多视角不一致。
 - 可能原因：提示词歧义、学习率不合适、视角采样不足、扩散引导偏差。
 - 截图路径（至少 2 张/案例）保存于 `docs/report/exp3/screenshots/`。
+
+结果记录模板：
+
+- F1：
+  - Command：
+  - Symptom：
+  - Suspected cause：
+  - Evidence images：
+  - Improvement idea：
+- F2：
+  - Command：
+  - Symptom：
+  - Suspected cause：
+  - Evidence images：
+  - Improvement idea：
 
 ### 5.2 失败分析记录模板
 
@@ -202,6 +334,8 @@ python main.py -O --text "a zoomed out DSLR photo of a baby bunny sitting on top
 
 ### 6.2 对比实验命令示例（学习率）
 
+可复制执行命令：
+
 ```powershell
 python main.py -O --text "a tiger dressed as a doctor" --workspace trial_lr3e4 --iters 6000 --IF --batch_size 1 --perpneg --lr 3e-4
 python main.py -O --text "a tiger dressed as a doctor" --workspace trial_lr5e4 --iters 6000 --IF --batch_size 1 --perpneg --lr 5e-4
@@ -216,6 +350,15 @@ python main.py -O --text "a tiger dressed as a doctor" --workspace trial_lr5e4 -
   - 多视角一致性
   - 收敛稳定性
 - 保存到 `docs/report/exp3/logs/30_hparam_study.md`。
+
+结果记录模板：
+
+- [ ] 已执行 Exp-1 训练
+- [ ] 已执行 Exp-2 训练
+- [ ] 已保存日志到 `docs/report/exp3/logs/30_hparam_study.md`
+- 对比命令记录：
+  - Exp-1 Command：
+  - Exp-2 Command：
 
 ### 6.3 对比表模板
 
@@ -233,6 +376,8 @@ python main.py -O --text "a tiger dressed as a doctor" --workspace trial_lr5e4 -
 
 ### 7.1 显存日志提炼
 
+可复制执行命令：
+
 从 `10_gpustat_baseline.txt` 与对比实验日志提取：
 
 - 峰值显存。
@@ -249,6 +394,18 @@ Select-String -Path .\docs\report\exp3\logs\10_gpustat_baseline.txt -Pattern "Mi
 
 - 不同实验设置下的显存变化对比。
 - 显存与质量、稳定性的关系判断。
+
+结果记录模板：
+
+- [ ] 已从 `10_gpustat_baseline.txt` 提取峰值显存
+- [ ] 已估算平均显存
+- [ ] 已记录显存波动区间
+- [ ] 已完成不同参数设置的显存对比说明
+- 结果记录：
+  - Baseline Peak VRAM：
+  - Exp-1 Peak VRAM：
+  - Exp-2 Peak VRAM：
+  - 结论：
 
 ## 8. 报告撰写映射（对应课程要求）
 
@@ -290,224 +447,3 @@ Select-String -Path .\docs\report\exp3\logs\10_gpustat_baseline.txt -Pattern "Mi
 - [ ] 已完成至少 1 项超参数改动并进行对比。
 - [ ] 已形成可直接用于报告的表格与结论素材。
 
-## 11. 可直接打勾的实验日志模板
-
-> 使用方式：每完成一步勾选一次，并立即填写该步结果。建议每次训练都复制一份本模板。
-
----
-
-### 11.1 实验基本信息
-
-- [ ] 已填写实验元信息
-- 日期：
-- 姓名/学号：
-- 机器信息（GPU/显存）：
-- Conda 环境名：
-- 本次实验编号（例如 `EXP3-R1`）：
-- 目标提示词（Prompt）：
-
----
-
-### 11.2 阶段一：环境检查与安装
-
-#### Step A1 CUDA 与 GPU 检查
-
-- [ ] 已执行 `nvcc -V`
-- [ ] 已执行 `nvidia-smi`
-- [ ] 已保存输出到 `docs/report/exp3/logs/00_env_check.txt`
-- 关键结果记录：
-  - CUDA 版本：
-  - Driver 版本：
-  - GPU 型号：
-  - 显存总量：
-
-#### Step A2 环境与依赖安装
-
-- [ ] 已执行 `conda create --name MTN python=3.9 -y`
-- [ ] 已执行 `conda activate MTN`
-- [ ] 已执行 `pip install torch==1.13.1`
-- [ ] 已执行 `conda install -c conda-forge gcc=11.2.0 gxx=11.2.0 -y`
-- [ ] 已执行 `pip install -r requirements.txt --no-build-isolation`
-- [ ] 已执行 `pip install gpustat`
-- [ ] 已保存安装日志到 `docs/report/exp3/logs/01_install_log.txt`
-- 安装结论：
-  - 是否成功（是/否）：
-  - 若失败，报错关键词：
-  - 解决方法：
-
-#### Step A3 版本确认
-
-- [ ] 已执行 `python --version`
-- [ ] 已执行 `python -c "import torch; print(torch.__version__); print(torch.cuda.is_available())"`
-- [ ] 已执行 `pip show gpustat`
-- [ ] 已保存版本信息到 `docs/report/exp3/logs/02_versions.txt`
-- 关键结果记录：
-  - Python 版本：
-  - Torch 版本：
-  - CUDA 可用（True/False）：
-  - gpustat 版本：
-
----
-
-### 11.3 阶段二：基线实验
-
-#### Step B1 启动显存监控
-
-- [ ] 已在独立终端执行 `gpustat --color -i 5 | Tee-Object -FilePath .\docs\report\exp3\logs\10_gpustat_baseline.txt`
-- [ ] 监控终端保持到训练结束
-- [ ] 显存日志文件已生成
-- 记录：
-  - 开始时间：
-  - 结束时间：
-  - 是否中断（是/否）：
-  - 中断原因（如有）：
-
-#### Step B2 基线训练
-
-- [ ] 已执行基线训练命令
-- 基线命令：
-
-```powershell
-python main.py -O --text "a tiger dressed as a doctor" --workspace trial_baseline --iters 6000 --batch_size 1 --IF --perpneg
-```
-
-- [ ] 如显存不足，已改用 SD2.1 命令
-
-```powershell
-python main.py -O --text "a tiger dressed as a doctor" --workspace trial_baseline --iters 6000 --batch_size 1 --sd_version 2.1
-```
-
-- [ ] 已保存训练日志到 `docs/report/exp3/logs/11_train_baseline.txt`
-- 训练记录：
-  - 实际执行命令：
-  - 开始时间：
-  - 结束时间：
-  - 总时长：
-  - 是否 OOM（是/否）：
-  - 其他报错：
-  - 关键 loss 片段：
-
-#### Step B3 导出与结果检查
-
-- [ ] 已执行 `python main.py --workspace trial_baseline -O --test`
-- [ ] 已执行 `python main.py --workspace trial_baseline -O --test --save_mesh`
-- [ ] 已保存导出记录到 `docs/report/exp3/logs/12_export_baseline.txt`
-- 文件记录：
-  - 视频路径：
-  - 视频大小：
-  - 网格路径：
-  - 网格大小：
-- 质量评分（1-5）：
-  - Geometry：
-  - Texture：
-  - Multi-view consistency：
-- 简要结论：
-
----
-
-### 11.4 阶段三：失败案例分析
-
-#### Step C1 失败案例 F1
-
-- [ ] 已确定案例编号 `F1`
-- [ ] 已记录对应命令
-- [ ] 已保存至少 2 张截图到 `docs/report/exp3/screenshots/`
-- [ ] 已写入 `docs/report/exp3/logs/20_failure_analysis.md`
-- F1 记录：
-  - Command：
-  - Symptom：
-  - Suspected cause：
-  - Evidence images：
-  - Improvement idea：
-
-#### Step C2 失败案例 F2
-
-- [ ] 已确定案例编号 `F2`
-- [ ] 已记录对应命令
-- [ ] 已保存至少 2 张截图到 `docs/report/exp3/screenshots/`
-- [ ] 已写入 `docs/report/exp3/logs/20_failure_analysis.md`
-- F2 记录：
-  - Command：
-  - Symptom：
-  - Suspected cause：
-  - Evidence images：
-  - Improvement idea：
-
----
-
-### 11.5 阶段四：超参数对比实验
-
-#### Step D1 对比实验配置
-
-- [ ] 已确定改动参数（例如 `--lr` / `--iters`）
-- [ ] 已记录基线参数
-- [ ] 已设置实验 1（例如 `trial_lr3e4`）
-- [ ] 已设置实验 2（例如 `trial_lr5e4`）
-- 参数说明：
-  - Baseline：
-  - Exp-1：
-  - Exp-2：
-
-#### Step D2 执行对比实验
-
-- [ ] 已执行 Exp-1 训练
-- [ ] 已执行 Exp-2 训练
-- [ ] 已保存日志到 `docs/report/exp3/logs/30_hparam_study.md`
-- 对比命令记录：
-  - Exp-1 Command：
-  - Exp-2 Command：
-
-#### Step D3 填写对比表
-
-- [ ] 已填写训练时长
-- [ ] 已填写峰值显存
-- [ ] 已填写质量评分
-- [ ] 已写总结结论
-
-```markdown
-| Workspace      | Key Param | Train Time | Peak VRAM | Geometry(1-5) | Texture(1-5) | Consistency(1-5) | Stability(1-5) | Notes |
-|----------------|-----------|------------|-----------|----------------|--------------|------------------|----------------|-------|
-| trial_baseline | default   |            |           |                |              |                  |                |       |
-| trial_lr3e4    | lr=3e-4   |            |           |                |              |                  |                |       |
-| trial_lr5e4    | lr=5e-4   |            |           |                |              |                  |                |       |
-```
-
----
-
-### 11.6 阶段五：显存与效率总结
-
-#### Step E1 显存信息提炼
-
-- [ ] 已从 `10_gpustat_baseline.txt` 提取峰值显存
-- [ ] 已估算平均显存
-- [ ] 已记录显存波动区间
-- [ ] 已完成不同参数设置的显存对比说明
-- 结果记录：
-  - Baseline Peak VRAM：
-  - Exp-1 Peak VRAM：
-  - Exp-2 Peak VRAM：
-  - 结论：
-
----
-
-### 11.7 报告素材验收（提交前）
-
-- [ ] 已有 Introduction 素材
-- [ ] 已有 Method（命令+参数）素材
-- [ ] 已有 Results（视频/网格/截图）素材
-- [ ] 已有 Failure Analysis（F1/F2）素材
-- [ ] 已有 Hyper-parameter Study 对比表
-- [ ] 已有至少两条 Improvement Suggestions
-- [ ] 已完成结论与反思
-
-最终提交文件清单：
-
-- [ ] `docs/report/exp3/logs/00_env_check.txt`
-- [ ] `docs/report/exp3/logs/01_install_log.txt`
-- [ ] `docs/report/exp3/logs/02_versions.txt`
-- [ ] `docs/report/exp3/logs/10_gpustat_baseline.txt`
-- [ ] `docs/report/exp3/logs/11_train_baseline.txt`
-- [ ] `docs/report/exp3/logs/12_export_baseline.txt`
-- [ ] `docs/report/exp3/logs/20_failure_analysis.md`
-- [ ] `docs/report/exp3/logs/30_hparam_study.md`
-- [ ] `docs/report/exp3/screenshots/`（至少 4 张失败案例图）

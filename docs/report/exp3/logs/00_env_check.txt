@@ -1,0 +1,30 @@
+Sat Mar  7 12:55:38 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 577.00                 Driver Version: 577.00         CUDA Version: 12.9     |
+|-----------------------------------------+------------------------+----------------------+
+| GPU  Name                  Driver-Model | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA GeForce RTX 4090      WDDM  |   00000000:01:00.0  On |                  Off |
+|  0%   33C    P8             12W /  450W |     446MiB /  24564MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|    0   N/A  N/A            3540    C+G   ...5n1h2txyewy\TextInputHost.exe      N/A      |
+|    0   N/A  N/A            4900    C+G   ....0.3800.82\msedgewebview2.exe      N/A      |
+|    0   N/A  N/A            5860    C+G   ...ms\Microsoft VS Code\Code.exe      N/A      |
+|    0   N/A  N/A            7948    C+G   ...indows\System32\ShellHost.exe      N/A      |
+|    0   N/A  N/A           15104    C+G   ..._cw5n1h2txyewy\SearchHost.exe      N/A      |
+|    0   N/A  N/A           15116    C+G   ...y\StartMenuExperienceHost.exe      N/A      |
+|    0   N/A  N/A           17120    C+G   ...2txyewy\CrossDeviceResume.exe      N/A      |
+|    0   N/A  N/A           18292    C+G   C:\Windows\explorer.exe               N/A      |
+|    0   N/A  N/A           18572    C+G   ...desk\Autodesk AdSSO\AdSSO.exe      N/A      |
+|    0   N/A  N/A           18656    C+G   ...launcher\AdskAccessUIHost.exe      N/A      |
+|    0   N/A  N/A           20492    C+G   ...Chrome\Application\chrome.exe      N/A      |
++-----------------------------------------------------------------------------------------+
