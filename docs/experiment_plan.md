@@ -471,10 +471,18 @@ PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a tig
 
 ### 4.5 下一步
 
-1. 查看 `./trial_if_lowmem/results/df_ep0060_rgb.mp4` 与 `./trial_if_lr3e4/results/df_ep0060_rgb.mp4`，做主观质量对比。
-2. 若 `trial_if_lr3e4` 质量更好，可继续执行 `python main.py --workspace trial_if_lr3e4 -O --test --save_mesh` 导出网格。
-3. 补写 `./logs/30_hparam_study.md`，把两组实验整理成对比表。
-4. 使用 `python ./scripts/extract_video_screenshots.py ...` 从结果视频中抽取代表帧，统一保存到 `./logs/video_screenshots/`，再挑选插入报告。
+当前最优先只做 4 件事：
+
+1. 观看 3 组 RGB 视频，给每组填写 `Geometry / Texture / Multi-view consistency`。
+2. 从 `./logs/video_screenshots/` 中挑选成功图、失败图、对比图，复制到 `./docs/report/exp3/screenshots/`。
+3. 在 `./logs/20_failure_analysis.md` 中补齐 `F1`、`F2`。
+4. 在 `./logs/30_hparam_study.md` 中整理三组实验对比结论。
+
+若你认为某一组结果最好，再额外执行该组的 mesh 导出：
+
+```bash
+python main.py --workspace <best_workspace> -O --test --save_mesh
+```
 
 ## 5. 阶段三：失败模式分析（至少两个案例）
 
@@ -554,33 +562,21 @@ python ./scripts/extract_video_screenshots.py ./trial_if_perpneg_lowmem/results/
 - 训练步数（`--iters`）：例如 6000 改 8000。
 - 渲染分辨率相关参数（若代码支持）。
 
-### 6.2 对比实验命令示例（学习率）
+### 6.2 本次实际对比的 3 组实验
 
-可复制执行命令：
+本次不再新增命令，直接比较已经完成的 3 组结果：
 
 ```bash
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a tiger dressed as a doctor" --workspace trial_if_lowmem --iters 6000 --batch_size 1 --IF --vram_O --w 48 --h 48
 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a tiger dressed as a doctor" --workspace trial_if_lr3e4 --iters 6000 --batch_size 1 --IF --vram_O --w 48 --h 48 --lr 3e-4
-PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a tiger dressed as a doctor" --workspace trial_if_lr5e4 --iters 6000 --batch_size 1 --IF --vram_O --w 48 --h 48 --lr 5e-4
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a tiger dressed as a doctor" --workspace trial_if_perpneg_lowmem --iters 6000 --batch_size 1 --IF --perpneg --vram_O --w 48 --h 48
 ```
 
-记录内容：
+需要补写的只有：
 
-- 每次实验完整命令、训练时长、显存峰值。
-- 输出质量评分（可用 1-5 分）：
-  - 几何完整度
-  - 纹理真实性
-  - 多视角一致性
-  - 收敛稳定性
-- 保存到 `./logs/30_hparam_study.md`。
-
-结果记录模板：
-
-- [x] 已执行 Exp-1 训练
-- [ ] 已执行 Exp-2 训练
-- [ ] 已保存日志到 `./logs/30_hparam_study.md`
-- 对比命令记录：
-  - Exp-1 Command：`PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a tiger dressed as a doctor" --workspace trial_if_lr3e4 --iters 6000 --batch_size 1 --IF --vram_O --w 48 --h 48 --lr 3e-4`
-  - Exp-2 Command：`PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a tiger dressed as a doctor" --workspace trial_if_lr5e4 --iters 6000 --batch_size 1 --IF --vram_O --w 48 --h 48 --lr 5e-4`
+- 三组的主观质量评分。
+- 三组的优缺点总结。
+- 哪一组最适合当最终展示结果。
 
 ### 6.3 对比表模板
 
@@ -591,7 +587,7 @@ PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a tig
 |------------------|-----------|------------|-----------|----------|---------|-------------|-----------|-------|
 | trial_if_lowmem  | default   | 17.77 min  | 12.0 GB   |          |         |             | stable    | low-memory IF baseline |
 | trial_if_lr3e4   | lr=3e-4   | 17.44 min  | 12.0 GB   |          |         |             | stable    | result videos exported |
-| trial_if_lr5e4   | lr=5e-4   |            |           |          |         |             |           | pending |
+| trial_if_perpneg_lowmem | perpneg + vram_O | 103.98 min | 13.8 GB |          |         |             | stable but slow | IF + perpneg low-memory |
 ```
 
 ## 7. 阶段五：显存与效率总结
@@ -626,8 +622,8 @@ grep "MiB" ./logs/10_gpustat_baseline.txt
 - 结果记录：
   - Baseline Peak VRAM：`12.0GB`（`trial_if_lowmem` 训练日志）
   - Exp-1 Peak VRAM：`12.0GB`（`trial_if_lr3e4` 训练日志；`gpustat` 训练时段最高约 `13.3GB / 24.6GB`）
-  - Exp-2 Peak VRAM：待补充
-  - 结论：当前低显存 IF 基线与 `lr=3e-4` 对比实验都能稳定控制在 RTX 4090 可承受范围内；单独提高学习率到 `3e-4` 没有带来明显额外显存压力。
+  - Exp-2 Peak VRAM：`13.8GB`（`trial_if_perpneg_lowmem` 训练日志）
+  - 结论：`trial_if_lowmem` 与 `trial_if_lr3e4` 显存和时长接近；`trial_if_perpneg_lowmem` 能跑通，但显存更高、时间显著更长。
 
 ## 8. 报告撰写映射（对应课程要求）
 
@@ -667,5 +663,5 @@ grep "MiB" ./logs/10_gpustat_baseline.txt
 - [x] 已保存显存监控日志。
 - [ ] 已分析至少 2 个失败案例并附截图。
 - [x] 已完成至少 1 项超参数改动并进行对比。
-- [ ] 已形成可直接用于报告的表格与结论素材。
+- [ ] 已形成可直接用于报告的表格、截图与结论素材。
 
