@@ -20,7 +20,9 @@ tets/256_tets.npz
 .vscode/launch.json
 
 # Ignore only top-level trial outputs in project root.
-/trial*
+/trial*/checkpoints/
+/trial*/validation/
+/trial*/run/
 
 data2
 data/car*
