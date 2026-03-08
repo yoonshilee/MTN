@@ -457,67 +457,88 @@ PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a DSL
   - 主观判断：相较 `trial_if_perpneg_lowmem`，本轮 `DSLR photo + negative_w=-3.0` 设定没有带来可用质量提升，反而仍然落入明显失败模式，不适合作为最终展示结果
   - 备注：本轮未附带独立 `gpustat` 输出，因此显存分析当前以训练日志为准；若后续要写入最终显存对比表，建议补充一次独立显存监控实验或在报告中注明数据来源差异
 
-#### 4.2.5 新增实验：验证 `num_steps / upsample_steps` 命令改写的实际影响
+#### 4.2.5 新增实验：IF tiger 正常提示词基线（去掉 `perpneg`）
 
 计划目的：
 
-- 针对用户希望运行的命令，单独设计一组“参数表面变化但渲染主路径基本不变”的对照实验。
-- 重点确认：在保留 `-O` 的前提下，新增 `--num_steps 32 --upsample_steps 16` 是否真的影响训练结果。
-- 同时观察：移除 `--w 48 --h 48` 后回到默认 `64x64` 分辨率，是否会显著提高显存压力、训练时间与失败风险。
+- 使用更接近常规文本到三维基线的设置，重新测试提示词 `a DSLR photo of a tiger dressed as a doctor`。
+- 与上一轮失败的 `IF + perpneg + negative_w=-3.0` 实验形成直接对照，验证“球体化失败”是否主要由 `perpneg` 强约束引起。
+- 保留 `IF`、`6000 iter`、`seed=3407` 与 `64x64` 分辨率，便于后续将该组结果纳入最终报告中的同主题对比。
 
-用户原始想运行的命令：
+用户拟采用的新命令：
 
 ```bash
-python main.py -O --text "a DSLR photo of a tiger dressed as a doctor" --workspace trial_perpneg_if_tiger_baseline_6000 --iters 6000 --IF --batch_size 1 --perpneg --negative_w -3.0 --vram_O --num_steps 32 --upsample_steps 16
+python main.py -O --text "a DSLR photo of a tiger dressed as a doctor" --workspace exp017_if_tiger --iters 6000 --IF --batch_size 1 --h 64 --w 64 --seed 3407 --vram_O --eval_interval 10 --test_interval 100 --dataset_size_test 100
 ```
 
-实验设计调整：
+实验设计说明：
 
-- 不建议继续复用已有的 `trial_perpneg_if_tiger_baseline_6000` workspace，因为上一轮该目录已经产生“球体化失败结果”，继续复用会混淆 checkpoint、日志与结果视频。
-- 建议为这次新实验使用独立 workspace，便于和上一轮失败实验逐项对比。
-- 建议继续保留独立显存监控日志，避免再次缺失 `gpustat` 证据。
-- 已新建本轮实验 workspace：`./trial_perpneg_if_tiger_steps_test/`
+- 本轮实验的核心变化是：去掉 `--perpneg` 与 `--negative_w -3.0`，改为更标准的 IF 文本提示训练配置。
+- 本轮显式指定 `--h 64 --w 64`，即使用 `64x64` 训练分辨率；这会比此前跑通的 `48x48` 低显存配置更吃显存。
+- 本轮仍保留 `-O` 与 `--vram_O`，因此仍属于当前机器可尝试的中高显存配置，但理论上应明显比 `IF + perpneg` 更稳定。
+- 本轮命令改为与本计划其他实验一致的相对写法，默认在项目根目录下执行即可。
 
-建议采用的实验命令（保持用户核心参数不变，仅更换 workspace 并补回显存碎片配置）：
+建议执行前补充显存监控：
 
 ```bash
-gpustat --color -i 5 | tee ./logs/16_gpustat_perpneg_if_tiger_steps_test.txt
-PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a DSLR photo of a tiger dressed as a doctor" --workspace trial_perpneg_if_tiger_steps_test --iters 6000 --IF --batch_size 1 --perpneg --negative_w -3.0 --vram_O --num_steps 32 --upsample_steps 16
+gpustat --color -i 5 | tee ./logs/17_gpustat_exp017_if_tiger.txt
+python main.py -O --text "a DSLR photo of a tiger dressed as a doctor" --workspace exp017_if_tiger --iters 6000 --IF --batch_size 1 --h 64 --w 64 --seed 3407 --vram_O --eval_interval 10 --test_interval 100 --dataset_size_test 100
 ```
 
 建议输出位置：
 
-- 显存日志：`./logs/16_gpustat_perpneg_if_tiger_steps_test.txt`
-- 文本日志：`./logs/trial_perpneg_if_tiger_steps_test_log_df.txt`
-- 结构化日志：`./logs/trial_perpneg_if_tiger_steps_test_train_metrics_df.csv`
-- 结果目录：`./trial_perpneg_if_tiger_steps_test/`
-
-执行说明：
-
-- 本轮请直接使用新 workspace `trial_perpneg_if_tiger_steps_test`，不要再写回 `trial_perpneg_if_tiger_baseline_6000`。
-- 这样可以避免加载到上一轮失败实验的旧 checkpoint，也便于后续把两轮实验结果分别写入对比表。
+- 显存日志：`./logs/17_gpustat_exp017_if_tiger.txt`
+- 结果目录：`./exp017_if_tiger/`
+- 文本日志：通常由程序自动写入对应 central logs 目录，建议训练后检查 `exp017_if_tiger` 对应的文本日志与 CSV 日志是否已生成
 
 重点观察项：
 
 - 是否出现 OOM。
-- 是否仍然生成“球体化”结果。
-- 训练时间是否明显高于上一轮 `trial_perpneg_if_tiger_baseline_6000`。
-- 显存峰值是否因默认回到 `64x64` 而明显高于上一轮。
-- 在保留 `-O` 的情况下，`--num_steps 32 --upsample_steps 16` 是否对结果产生可见影响。
+- 是否摆脱上一轮“生成球体”的失败模式。
+- 几何主体是否开始形成清晰的“虎头/躯干/医生服饰”轮廓。
+- 在 `64x64` 分辨率下，纹理是否优于此前 `48x48` 低显存实验。
+- 训练时长与峰值显存是否明显高于 `trial_if_lowmem` 与 `trial_if_lr3e4`。
 
 与上一轮实验命令的差异说明：
 
 - 上一轮命令为：`PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a DSLR photo of a tiger dressed as a doctor" --workspace trial_perpneg_if_tiger_baseline_6000 --iters 6000 --IF --batch_size 1 --perpneg --negative_w -3.0 --vram_O --w 48 --h 48`
-- 本次用户拟运行命令新增了 `--num_steps 32 --upsample_steps 16`。
-- 本次用户拟运行命令删除了 `--w 48 --h 48`，因此训练分辨率会回到默认 `64x64`，这通常比上一轮更占显存，也更容易失败。
-- 本次用户拟运行命令没有写 `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True`，因此在显存碎片较严重时，稳定性可能略差于上一轮。
-- 更关键的是：由于命令中仍然保留 `-O`，程序会启用 `--cuda_ray`；在这种设置下，`--num_steps` 和 `--upsample_steps` 通常不会像用户直觉那样真正控制主训练路径的采样步数，因此它们大概率不会带来与“降低步数”相匹配的显著提速或降显存效果。
+- 本轮新命令移除了 `--perpneg`，因此不会再启用 perpendicular negative guidance。
+- 本轮新命令移除了 `--negative_w -3.0`，因此不再对负向约束施加强抑制。
+- 本轮新命令把训练分辨率明确设为 `--h 64 --w 64`，高于上一轮的 `48x48`，因此显存压力通常会更高。
+- 本轮新命令显式固定 `--seed 3407`，有利于后续复现实验。
+- 本轮新命令新增 `--eval_interval 10`、`--test_interval 100`、`--dataset_size_test 100`，使评估与测试频率设置更明确，但它们不是决定成败的主要变化。
+- 本轮新命令改回相对路径写法，便于和本计划中的其他实验命令保持一致。
 
 预期结论：
 
-- 这组实验的真正有效变化，主要不是 `--num_steps 32 --upsample_steps 16`，而是“去掉了 `--w 48 --h 48`，回到默认 `64x64`”。
-- 因此，相比上一轮实验，这次更可能出现的是：显存更高、耗时更长、失败风险更大；而不是因为 `num_steps` 下降而显著更轻量。
-- 若本实验再次失败，则可以较有把握地说明：在 `-O` 模式下，问题核心不在 `num_steps / upsample_steps`，而在 `IF + perpneg + 默认分辨率 + 强负权重` 这一组合本身。
+- 如果本轮结果明显好于上一轮“球体化失败”结果，则可以初步判断：`perpneg + negative_w=-3.0` 是导致该主题生成失败的重要因素之一。
+- 如果本轮虽然更稳定，但仍然失败，则更可能说明：问题不仅来自 `perpneg`，还与 `IF` 对该提示词的三维几何先验不足有关。
+- 若本轮能够生成可辨认主体，则这组实验将成为“同一提示词下去掉 `perpneg` 后质量改善”的关键证据，可直接写入最终报告的对比分析。
+
+结果记录模板：
+
+- [ ] 已执行 `exp017_if_tiger` 训练
+- [ ] 已生成 `./logs/17_gpustat_exp017_if_tiger.txt`
+- [ ] 已自动生成文本日志与 CSV 日志
+- [ ] 已完成测试视频导出
+- 训练记录：
+  - 实际执行命令：`python main.py -O --text "a DSLR photo of a tiger dressed as a doctor" --workspace exp017_if_tiger --iters 6000 --IF --batch_size 1 --h 64 --w 64 --seed 3407 --vram_O --eval_interval 10 --test_interval 100 --dataset_size_test 100`
+  - 开始时间：
+  - 结束时间：
+  - 总时长：
+  - 是否完成 6000 iter / 60 epoch（是/否）：
+  - 是否 OOM（是/否）：
+  - 其他报错：
+  - 关键 loss 片段：
+  - 文本日志路径：
+  - 结构化日志路径：
+  - 显存监控日志：`./logs/17_gpustat_exp017_if_tiger.txt`
+  - 结果视频路径：`./exp017_if_tiger/results/df_ep0060_rgb.mp4`
+  - 深度视频路径：`./exp017_if_tiger/results/df_ep0060_depth.mp4`
+  - 法线视频路径：`./exp017_if_tiger/results/df_ep0060_normal.mp4`
+  - 显存结论：
+  - 质量结论：
+  - 与 `trial_perpneg_if_tiger_baseline_6000` 的对比结论：
 
 ### 4.3 导出视频与网格
 
