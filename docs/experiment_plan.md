@@ -230,7 +230,7 @@ gpustat --color -i 5 | tee ./logs/10_gpustat_baseline.txt
 结果记录模板：
 
 - [x] 已在独立终端执行 `gpustat --color -i 5 | tee ./logs/10_gpustat_baseline.txt`
-- [ ] 监控终端完整保持到训练结束
+- [x] 监控终端完整保持到训练结束
 - [x] 显存日志文件已生成
 - 记录：
   - 开始时间：已执行
@@ -323,7 +323,7 @@ PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a tig
   - 显存监控日志：`./logs/13_gpustat_if_perpneg.txt`
   - 结论：当前机器不适合直接运行原始 `--IF --perpneg` 配置，应改用降显存版本。
 
-#### 4.2.3 保留 IF + perpneg 的降显存实验（下一步建议）
+#### 4.2.3 保留 IF + perpneg 的降显存实验
 
 若仍希望测试 `IF + perpneg`，建议先使用下面的降显存版本，而不要直接回到 4.2.2 的默认设置。
 
@@ -376,6 +376,59 @@ PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a tig
   - 显存结论：训练日志显示 GPU 常驻约 `14.0 ~ 15.0GB`，峰值约 `13.8GB`；明显高于不带 `perpneg` 的低显存 IF 基线，但已成功跑通
   - 结论：`--vram_O --w 48 --h 48` 足以让 `IF + perpneg` 在当前 RTX 4090 上完成训练，但代价是训练和测试时间显著增加。
 
+#### 4.2.4 新增实验：IF tiger prompt + perpneg 基线（6000 iter / 约 60 epoch）
+
+计划目的：
+
+- 将提示词改为更接近自然图像表述的 `a DSLR photo of a tiger dressed as a doctor`，观察在 `IF + perpneg` 条件下是否比现有结果更稳定。
+- 保留 `6000 iter`，便于和前面已完成实验直接对比；按当前 `dataset_size_train = 100` 估算，`6000 iter` 约对应 `60 epoch`。
+
+用户提出的命令：
+
+```bash
+python main.py -O --text "a DSLR photo of a tiger dressed as a doctor" --workspace trial_perpneg_if_tiger_baseline_6000 --iters 6000 --IF --batch_size 1 --perpneg --negative_w -3.0 --vram_O --num_steps 32 --upsample_steps 16
+```
+
+合理性分析：
+
+- `--IF --perpneg --negative_w -3.0` 的组合是合理的，`-3.0` 仍位于代码注释建议的 `0 ~ -4` 范围内，比默认 `-2` 更强地抑制 Janus 问题，但也更容易带来平面化、噪声或纹理退化。
+- `--vram_O` 是合理的。前文已经证明 `IF + perpneg` 属于高显存配置，保留低显存优化是必要的。
+- `--batch_size 1` 也是合理的，符合当前显存约束。
+- 主要问题在于：`-O` 会自动启用 `--cuda_ray`，而 `--num_steps` 和 `--upsample_steps` 仅在不使用 `--cuda_ray` 时才生效，因此这两个参数在该命令下基本不会起作用。
+- 另一个风险在于该命令没有显式设置 `--w 48 --h 48`，会回到默认训练分辨率 `64x64`。即使开启了 `--vram_O`，相比已经跑通的 `48x48` 配置，仍会明显提高显存压力和失败风险。
+
+建议采用的修正版命令：
+
+```bash
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a DSLR photo of a tiger dressed as a doctor" --workspace trial_perpneg_if_tiger_baseline_6000 --iters 6000 --IF --batch_size 1 --perpneg --negative_w -3.0 --vram_O --w 48 --h 48
+```
+
+说明：
+
+- 若坚持保留 `-O`，建议删除 `--num_steps 32 --upsample_steps 16`，因为它们不会带来预期效果。
+- 若你的目标是专门测试 `--num_steps` / `--upsample_steps` 对结果的影响，则不应使用 `-O`，而应单独设计一组不用 `--cuda_ray` 的实验。
+- 该实验建议单独开启显存监控，并使用独立 workspace，避免与现有 `trial_if_perpneg_lowmem` 混淆。
+
+建议输出位置：
+
+- 显存日志：`./logs/15_gpustat_perpneg_if_tiger_baseline_6000.txt`
+- 文本日志：`./logs/trial_perpneg_if_tiger_baseline_6000_log_df.txt`
+- 结构化日志：`./logs/trial_perpneg_if_tiger_baseline_6000_train_metrics_df.csv`
+- 结果目录：`./trial_perpneg_if_tiger_baseline_6000/`
+
+建议执行顺序：
+
+```bash
+gpustat --color -i 5 | tee ./logs/15_gpustat_perpneg_if_tiger_baseline_6000.txt
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a DSLR photo of a tiger dressed as a doctor" --workspace trial_perpneg_if_tiger_baseline_6000 --iters 6000 --IF --batch_size 1 --perpneg --negative_w -3.0 --vram_O --w 48 --h 48
+```
+
+记录内容：
+
+- 是否成功完成 6000 iter / 约 60 epoch。
+- 是否出现 OOM、输出噪声化或几何过度扁平化。
+- 与 `trial_if_perpneg_lowmem` 相比，提示词改为 `DSLR photo` 后，几何质量、纹理质量、多视角一致性是否改善。
+
 ### 4.3 导出视频与网格
 
 可复制执行命令：
@@ -406,10 +459,20 @@ python main.py --workspace trial_if_lowmem -O --test --save_mesh
   - 贴图路径：`./trial_if_lowmem/mesh/albedo.png`
   - 网格规模：`15022` vertices, `30056` faces
 - 质量评分（1-5）：
-  - Geometry：
-  - Texture：
-  - Multi-view consistency：
-- 简要结论：已完成视频与网格导出，可继续进行主观质量评估与失败案例截图。
+  - Geometry：2
+  - Texture：2
+  - Multi-view consistency：3
+- 评分说明：
+  - Geometry：关注三维形状是否合理，重点看整体轮廓、结构完整性，以及是否存在塌陷、缺失、穿插、局部变形等几何问题。
+  - Texture：关注表面颜色与纹理质量，重点看纹理是否清晰、是否符合提示词，以及是否存在模糊、拉伸、错位、噪声伪影等问题。
+  - Multi-view consistency：关注不同视角下结果是否一致，重点看物体在旋转过程中是否出现结构跳变、纹理突变、身份变化、闪烁或忽隐忽现等现象。
+- 评分参考：
+  - 1 分：质量很差，缺陷非常明显，难以作为有效结果展示。
+  - 2 分：质量较差，能看出目标但存在较多明显问题。
+  - 3 分：质量一般，主体基本可辨认，但仍有较明显瑕疵。
+  - 4 分：质量较好，整体结果可信，只有少量局部问题。
+  - 5 分：质量很好，结果稳定自然，缺陷很少。
+- 简要结论：已完成视频与网格导出与主观质量评分。`trial_if_lowmem` 主体可辨认，但几何结构和纹理质量偏弱，多视角一致性一般，可作为低显存基线保留。
 
 视频截图要求与辅助脚本：
 
@@ -467,13 +530,14 @@ PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a tig
 - 两组实验都未出现 OOM。
 - `trial_if_lr3e4` 总时长约 `17.44` 分钟，和 `trial_if_lowmem` 的 `17.77` 分钟接近。
 - 两组实验显存占用接近，说明本轮仅修改学习率，没有明显增加显存压力。
-- 当前仍需人工查看视频主观质量，再判断 `--lr 3e-4` 是否优于基线。
+- 当前主观质量评分记录为：`Geometry = 4`、`Texture = 3`、`Multi-view consistency = 3`。
+- 主观结论：`trial_if_lr3e4` 的几何质量明显优于 `trial_if_lowmem`，纹理略有提升，但多视角一致性没有明显改善；在不增加显存压力的前提下，是当前更适合作为最终展示候选的结果。
 
 ### 4.5 下一步
 
 当前最优先只做 4 件事：
 
-1. 观看 3 组 RGB 视频，给每组填写 `Geometry / Texture / Multi-view consistency`。
+1. 将三组主观质量评分整理到最终报告表格与正文描述中。
 2. 从 `./logs/video_screenshots/` 中挑选成功图、失败图、对比图，复制到 `./docs/report/exp3/screenshots/`。
 3. 在 `./logs/20_failure_analysis.md` 中补齐 `F1`、`F2`。
 4. 在 `./logs/30_hparam_study.md` 中整理三组实验对比结论。
@@ -574,7 +638,6 @@ PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a tig
 
 需要补写的只有：
 
-- 三组的主观质量评分。
 - 三组的优缺点总结。
 - 哪一组最适合当最终展示结果。
 
@@ -582,13 +645,17 @@ PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a tig
 
 建议记录为：
 
-```markdown
-| Workspace        | Key Param | Train Time | Peak VRAM | Geometry | Texture | Consistency | Stability | Notes |
-|------------------|-----------|------------|-----------|----------|---------|-------------|-----------|-------|
-| trial_if_lowmem  | default   | 17.77 min  | 12.0 GB   |          |         |             | stable    | low-memory IF baseline |
-| trial_if_lr3e4   | lr=3e-4   | 17.44 min  | 12.0 GB   |          |         |             | stable    | result videos exported |
-| trial_if_perpneg_lowmem | perpneg + vram_O | 103.98 min | 13.8 GB |          |         |             | stable but slow | IF + perpneg low-memory |
-```
+| Workspace | Key Param | Train Time | Peak VRAM | Geometry | Texture | Consistency | Stability | Notes |
+| ------------------ | ----------- | ------------ | ----------- | ---------- | --------- | ------------- | ----------- | ------- |
+| trial_if_lowmem | default | 17.77 min | 12.0 GB | 2 | 2 | 3 | stable | low-memory IF baseline; recognizable result but weak geometry and texture |
+| trial_if_lr3e4 | lr=3e-4 | 17.44 min | 12.0 GB | 4 | 3 | 3 | stable | best geometry among current runs; texture improved slightly |
+| trial_if_perpneg_lowmem | perpneg + vram_O | 103.98 min | 13.8 GB | 1 | 1 | 1 | stable but slow | output is mostly noise; not suitable as final result |
+
+主观质量补充记录：
+
+- `trial_if_lowmem`：`Geometry = 2`、`Texture = 2`、`Multi-view consistency = 3`。结果主体可辨认，但几何结构较弱、表面纹理较粗糙。
+- `trial_if_lr3e4`：`Geometry = 4`、`Texture = 3`、`Multi-view consistency = 3`。几何完整度最好，纹理较基线有改善，但多视角稳定性仍然一般。
+- `trial_if_perpneg_lowmem`：结果基本表现为噪声，虽然训练流程跑通，但不适合作为有效展示结果；在对比表中按最低分记录以反映其实用价值较低。
 
 ## 7. 阶段五：显存与效率总结
 
