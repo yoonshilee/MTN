@@ -515,30 +515,32 @@ python main.py -O --text "a DSLR photo of a tiger dressed as a doctor" --workspa
 - 如果本轮虽然更稳定，但仍然失败，则更可能说明：问题不仅来自 `perpneg`，还与 `IF` 对该提示词的三维几何先验不足有关。
 - 若本轮能够生成可辨认主体，则这组实验将成为“同一提示词下去掉 `perpneg` 后质量改善”的关键证据，可直接写入最终报告的对比分析。
 
-结果记录模板：
+结果记录：
 
-- [ ] 已执行 `exp017_if_tiger` 训练
-- [ ] 已生成 `./logs/17_gpustat_exp017_if_tiger.txt`
-- [ ] 已自动生成文本日志与 CSV 日志
-- [ ] 已完成测试视频导出
+- [x] 已执行 `exp017_if_tiger` 训练
+- [x] 已生成 `./logs/17_gpustat_exp017_if_tiger.txt`
+- [x] 已自动生成文本日志与 CSV 日志
+- [x] 已完成测试视频导出
 - 训练记录：
   - 实际执行命令：`python main.py -O --text "a DSLR photo of a tiger dressed as a doctor" --workspace exp017_if_tiger --iters 6000 --IF --batch_size 1 --h 64 --w 64 --seed 3407 --vram_O --eval_interval 10 --test_interval 100 --dataset_size_test 100`
-  - 开始时间：
-  - 结束时间：
-  - 总时长：
-  - 是否完成 6000 iter / 60 epoch（是/否）：
-  - 是否 OOM（是/否）：
-  - 其他报错：
-  - 关键 loss 片段：
-  - 文本日志路径：
-  - 结构化日志路径：
+  - 开始时间：`2026-03-08 16:14:44`
+  - 结束时间：`2026-03-08 16:36:20` 左右（测试导出完成）
+  - 总时长：约 `21.7783` 分钟
+  - 是否完成 6000 iter / 60 epoch（是/否）：是
+  - 是否 OOM（是/否）：否
+  - 其他报错：无致命报错；主要为 AMP 弃用警告、`TORCH_CUDA_ARCH_LIST` 提示，以及 `huggingface_hub` 的 `resume_download` FutureWarning
+  - 关键 loss 片段：`avg_loss` 基本稳定在 `1.0000 ~ 1.0002`，后期个别 epoch 到 `1.0003`
+  - 文本日志路径：`./logs/exp017_if_tiger_log_df.txt`
+  - 结构化日志路径：`./logs/exp017_if_tiger_train_metrics_df.csv`
+  - TensorBoard 路径：`./logs/tensorboard/exp017_if_tiger/df/`
   - 显存监控日志：`./logs/17_gpustat_exp017_if_tiger.txt`
   - 结果视频路径：`./exp017_if_tiger/results/df_ep0060_rgb.mp4`
   - 深度视频路径：`./exp017_if_tiger/results/df_ep0060_depth.mp4`
   - 法线视频路径：`./exp017_if_tiger/results/df_ep0060_normal.mp4`
-  - 显存结论：
-  - 质量结论：
-  - 与 `trial_perpneg_if_tiger_baseline_6000` 的对比结论：
+  - 显存结论：训练日志显示 GPU 常驻约 `17.4 ~ 17.6GB`；`Peak_GPU` 在首个 epoch 约 `13.0GB`，后续大多在 `9.0 ~ 9.4GB`；整体显存占用明显高于 `48x48` 的低显存 IF 基线
+  - 速度结论：在去掉 `perpneg` 后，总训练+测试时长约 `21.78` 分钟，显著短于上一轮 `trial_perpneg_if_tiger_baseline_6000` 的约 `69.62` 分钟
+  - 质量结论：本轮已成功产出视频与验证图，但当前文档尚未补入人工主观观察；仍需查看 `df_ep0060_rgb.mp4` 后再判断几何是否成形、是否优于上一轮球体化失败结果
+  - 与 `trial_perpneg_if_tiger_baseline_6000` 的对比结论：本轮在移除 `perpneg` 与 `negative_w=-3.0` 后训练稳定性明显更好、耗时显著下降，且未出现训练侧失败；后续若视频主观质量也优于上一轮，则可进一步支持“强负向约束是上一轮失败重要原因之一”的判断
 
 ### 4.3 导出视频与网格
 

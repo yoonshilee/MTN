@@ -23,6 +23,9 @@ tets/256_tets.npz
 /trial*/checkpoints/
 /trial*/validation/
 /trial*/run/
+/exp0*/checkpoints/
+/exp0*/validation/
+/exp0*/run/
 
 data2
 data/car*
