@@ -45,3 +45,12 @@ data/mona_lisa_*
 data/futuristic_car_*
 data/church_ruins_*
 
+docs/report/acm/*.aux
+docs/report/acm/*.bbl
+docs/report/acm/*.blg
+docs/report/acm/*.log
+docs/report/acm/*.out
+docs/report/acm/*.pdf
+docs/report/acm/*.gz
+
+
