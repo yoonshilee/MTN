@@ -8,14 +8,13 @@
 - [x] 记录训练期间 GPU 显存变化
 - [x] 完成至少 1 项超参数改动实验并比较效果
 - [x] 获得至少 2 个可用于失败分析的案例
-- [ ] 整理最终报告截图
+- [x] 整理最终报告截图
 - [x] 建立 artifacts 索引
 - [ ] 补齐失败分析与超参数研究成稿
 
 最终报告建议采用：
 
 - 最佳结果：4.7 实验，文档内统一命名为 `trial_if_tiger_no_perpneg_64`。
-- 说明：实际已生成的 workspace 仍为 `exp017_if_tiger`，这里只修改计划中的命名风格，不改已有实验文件。
 
 ## 2. 环境准备与前置条件
 
@@ -83,7 +82,7 @@ PY
 | `trial_if_perpneg` | `trial_if_perpneg` | `--IF --perpneg` 默认 `64x64` | 数秒内失败 | OOM | 失败案例，证明默认 IF+perpneg 过重 |
 | `trial_if_perpneg_lowmem` | `trial_if_perpneg_lowmem` | `--IF --perpneg --vram_O --w 48 --h 48` | 约 103.98 min | 峰值约 `13.8GB`，稳定但很慢 | 呈现立体噪声，不适合作为展示结果 |
 | `trial_perpneg_if_tiger_baseline_6000` | `trial_perpneg_if_tiger_baseline_6000` | `DSLR prompt + --perpneg --negative_w -3.0` | 约 69.62 min | 高显存但未 OOM | 呈现大型立体光球，严重失败 |
-| `trial_if_tiger_no_perpneg_64` | `exp017_if_tiger` | `DSLR prompt`，去掉 `perpneg`，`64x64` | 约 21.78 min | 显存更高但稳定 | 当前最清晰、最适合作为最佳结果 |
+| `trial_if_tiger_no_perpneg_64` | `trial_if_tiger_no_perpneg_64` | `DSLR prompt`，去掉 `perpneg`，`64x64` | 约 21.78 min | 显存更高但稳定 | 当前最清晰、最适合作为最佳结果 |
 
 ## 4. 实验执行与结果记录
 
@@ -260,23 +259,21 @@ PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a DSL
 
 文档统一命名：`trial_if_tiger_no_perpneg_64`
 
-实际 workspace：`exp017_if_tiger`
-
 命令：
 
 ```bash
-gpustat --color -i 5 | tee ./logs/17_gpustat_exp017_if_tiger.txt
-python main.py -O --text "a DSLR photo of a tiger dressed as a doctor" --workspace exp017_if_tiger --iters 6000 --IF --batch_size 1 --h 64 --w 64 --seed 3407 --vram_O --eval_interval 10 --test_interval 100 --dataset_size_test 100
+gpustat --color -i 5 | tee ./logs/17_gpustat_trial_if_tiger_no_perpneg_64.txt
+python main.py -O --text "a DSLR photo of a tiger dressed as a doctor" --workspace trial_if_tiger_no_perpneg_64 --iters 6000 --IF --batch_size 1 --h 64 --w 64 --seed 3407 --vram_O --eval_interval 10 --test_interval 100 --dataset_size_test 100
 ```
 
 结果：
 
-- 文本日志：`./logs/exp017_if_tiger_log_df.txt`
-- CSV 日志：`./logs/exp017_if_tiger_train_metrics_df.csv`
-- 显存日志：`./logs/17_gpustat_exp017_if_tiger.txt`
-- 结果视频：`./exp017_if_tiger/results/df_ep0060_rgb.mp4`
-- 深度视频：`./exp017_if_tiger/results/df_ep0060_depth.mp4`
-- 法线视频：`./exp017_if_tiger/results/df_ep0060_normal.mp4`
+- 文本日志：`./logs/trial_if_tiger_no_perpneg_64_log_df.txt`
+- CSV 日志：`./logs/trial_if_tiger_no_perpneg_64_train_metrics_df.csv`
+- 显存日志：`./logs/17_gpustat_trial_if_tiger_no_perpneg_64.txt`
+- 结果视频：`./trial_if_tiger_no_perpneg_64/results/df_ep0060_rgb.mp4`
+- 深度视频：`./trial_if_tiger_no_perpneg_64/results/df_ep0060_depth.mp4`
+- 法线视频：`./trial_if_tiger_no_perpneg_64/results/df_ep0060_normal.mp4`
 - 训练时长：约 `21.7783` 分钟
 - 显存结论：GPU 常驻约 `17.4 ~ 17.6GB`，明显高于 `48x48` 低显存基线
 - 质量描述：这是当前唯一生成结果清晰的实验。主体能够明确识别为老虎，多视角连贯性明显优于前面几组；虽然仍存在服装不够自然、局部轻微模糊以及头部 Janus 伪影，但整体已经形成稳定且可展示的三维主体。
@@ -335,7 +332,7 @@ python main.py --workspace trial_if_lowmem -O --test --save_mesh
 python ./scripts/extract_video_screenshots.py ./trial_if_lowmem/results/df_ep0060_rgb.mp4 --count 4 --skip-first-last --output-dir ./logs/video_screenshots/trial_if_lowmem_rgb
 python ./scripts/extract_video_screenshots.py ./trial_if_lr3e4/results/df_ep0060_rgb.mp4 --count 4 --skip-first-last --output-dir ./logs/video_screenshots/trial_if_lr3e4_rgb
 python ./scripts/extract_video_screenshots.py ./trial_if_perpneg_lowmem/results/df_ep0060_rgb.mp4 --count 4 --skip-first-last --output-dir ./logs/video_screenshots/trial_if_perpneg_lowmem_rgb
-python ./scripts/extract_video_screenshots.py ./exp017_if_tiger/results/df_ep0060_rgb.mp4 --count 4 --skip-first-last --output-dir ./logs/video_screenshots/trial_if_tiger_no_perpneg_64_rgb
+python ./scripts/extract_video_screenshots.py ./trial_if_tiger_no_perpneg_64/results/df_ep0060_rgb.mp4 --count 4 --skip-first-last --output-dir ./logs/video_screenshots/trial_if_tiger_no_perpneg_64_rgb
 ```
 
 ## 6. 失败案例分析
@@ -343,7 +340,7 @@ python ./scripts/extract_video_screenshots.py ./exp017_if_tiger/results/df_ep006
 ### 6.1 失败案例 F1：默认 `IF + perpneg` OOM
 
 - [x] 已确定 F1 案例
-- [ ] 需要补 2 张失败截图或日志截图到报告目录
+- [x] 需要补 2 张失败截图或日志截图到报告目录
 
 案例信息：
 
@@ -356,7 +353,7 @@ python ./scripts/extract_video_screenshots.py ./exp017_if_tiger/results/df_ep006
 ### 6.2 失败案例 F2：`DSLR tiger + perpneg` 几何塌缩
 
 - [x] 已确定 F2 案例
-- [ ] 需要补 2 张失败截图到报告目录
+- [x] 需要补 2 张失败截图到报告目录
 
 案例信息：
 
@@ -369,7 +366,7 @@ python ./scripts/extract_video_screenshots.py ./exp017_if_tiger/results/df_ep006
 ### 6.3 失败案例补充说明
 
 - [x] 已形成两个失败案例的文字分析框架
-- [ ] 需要把最终截图放到 `./docs/report/exp3/screenshots/`
+- [x] 需要把最终截图放到 `./docs/report/exp3/screenshots/`
 
 ## 7. 超参数与方法对比
 
@@ -402,8 +399,8 @@ python ./scripts/extract_video_screenshots.py ./exp017_if_tiger/results/df_ep006
 - [x] 已补写 `./logs/12_export_baseline.txt`
 - [x] 已补写 `./logs/20_failure_analysis.md`
 - [x] 已补写 `./logs/30_hparam_study.md`
-- [ ] 复制成功图、失败图、对比图到报告目录
-- [ ] 若要突出最佳结果，补导出 4.6 的截图素材
+- [x] 复制成功图、失败图、对比图到报告目录
+- [x] 若要突出最佳结果，补导出 4.6 的截图素材
 
 ## 9. 最终自检清单
 
@@ -414,6 +411,6 @@ python ./scripts/extract_video_screenshots.py ./exp017_if_tiger/results/df_ep006
 - [x] 已确定本实验最佳结果为 4.6
 - [x] 已补齐失败分析文档
 - [x] 已补齐超参数对比文档
-- [ ] 已整理报告截图目录
+- [x] 已整理报告截图目录
 - [x] 已整理 artifacts 索引目录
 - [ ] 已形成最终报告可直接引用的表格与图注

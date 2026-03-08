@@ -39,7 +39,7 @@ This section compares three baseline-style runs using the prompt `a tiger dresse
 
 ## Best overall result outside the three-run baseline comparison
 
-The clearest result in the whole experiment is not one of the three baseline comparison runs above. It is the no-perpneg DSLR-prompt experiment recorded in the plan as `trial_if_tiger_no_perpneg_64`, whose actual workspace is `exp017_if_tiger`.
+The clearest result in the whole experiment is not one of the three baseline comparison runs above. It is the no-perpneg DSLR-prompt experiment recorded as `trial_if_tiger_no_perpneg_64`.
 
 This comparison supports the following interpretation:
 

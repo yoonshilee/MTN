@@ -1,7 +1,8 @@
-\documentclass[sigconf]{acmart}
+\documentclass[sigconf,nonacm]{acmart}
 
 \setcopyright{none}
-\settopmatter{printacmref=true}
+\settopmatter{printacmref=false}
+\renewcommand\footnotetextcopyrightpermission[1]{}
 \pagestyle{plain}
 \setlength{\headheight}{15.2pt}
 
@@ -9,8 +10,11 @@
 \usepackage{booktabs}
 \usepackage{array}
 \usepackage{amsmath}
+\usepackage{tabularx}
 
-\title[Failure-Aware Text-to-3D Generation with MTN]{Failure-Aware Text-to-3D Generation with MTN:\\An Experimental Study on a Tiger Doctor Prompt}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+
+\title[Experiment Report on Text-to-3D Generation with MTN]{Experiment Report on Text-to-3D Generation with MTN: A Tiger Doctor Case Study}
 
 \author{Student Name}
 \affiliation{%
@@ -25,32 +29,6 @@
 \begin{abstract}
 This report studies text-to-3D generation with MTN under a course-style experimental setting. The target prompt is \textit{a tiger dressed as a doctor}, and the goal is to obtain at least one usable 3D result, monitor GPU memory behavior, analyze failures, and examine hyper-parameter sensitivity. Six representative runs were organized around DeepFloyd-IF guidance, resolution control, learning-rate adjustment, and perpendicular negative prompting. The best result was produced by a DSLR-style prompt without \texttt{perpneg} at $64\times 64$, while the most severe failures were early out-of-memory termination and geometry collapse into a glowing sphere. The experiments show that prompt formulation and guidance configuration matter more than simply increasing constraint strength, and that memory-aware configuration is necessary before visual quality can even be discussed.
 \end{abstract}
-
-\begin{CCSXML}
-<ccs2012>
-   <concept>
-       <concept_id>10010147.10010371.10010396</concept_id>
-       <concept_desc>Computing methodologies~Graphics systems and interfaces</concept_desc>
-       <concept_significance>300</concept_significance>
-       </concept>
-   <concept>
-       <concept_id>10010147.10010257.10010293.10010294</concept_id>
-       <concept_desc>Computing methodologies~Neural networks</concept_desc>
-       <concept_significance>500</concept_significance>
-       </concept>
-   <concept>
-       <concept_id>10010147.10010371.10010382.10010383</concept_id>
-       <concept_desc>Computing methodologies~Image-based rendering</concept_desc>
-       <concept_significance>500</concept_significance>
-       </concept>
-</ccs2012>
-\end{CCSXML}
-
-\ccsdesc[500]{Computing methodologies~Neural networks}
-\ccsdesc[500]{Computing methodologies~Image-based rendering}
-\ccsdesc[300]{Computing methodologies~Graphics systems and interfaces}
-
-\keywords{text-to-3D, diffusion guidance, MTN, failure analysis, hyper-parameter study}
 
 \maketitle
 
@@ -76,19 +54,21 @@ Table~\ref{tab:results} summarizes the most relevant runs. The low-memory IF bas
 \caption{Summary of representative MTN runs for the tiger-doctor prompt family. Geometry, texture, and consistency are subjective scores on a 1--4 scale derived from the experiment log.}
 \label{tab:results}
 \centering
-\small
-\begin{tabular}{p{3.3cm} p{3.7cm} p{1.7cm} p{1.7cm} c c c p{3.1cm}}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\textwidth}{p{2.3cm} p{2.7cm} c c c c c Y}
 \toprule
 Workspace / name & Key setting & Time & Peak VRAM & Geo. & Tex. & Cons. & Observation \\
 \midrule
-\texttt{trial\_if\_lowmem} & IF, \texttt{vram\_O}, $48\times48$ & 17.77 min & 12.0 GB & 2 & 1 & 2 & Stable but blurry; object barely recognizable. \\
-\texttt{trial\_if\_lr3e4} & IF, \texttt{vram\_O}, $48\times48$, \texttt{lr=3e-4} & 17.44 min & 12.0 GB & 2 & 2 & 2 & Slightly clearer; still shows strong artifacts and semantic drift. \\
-\texttt{trial\_if\_perpneg} & IF, \texttt{perpneg}, default $64\times64$ & early fail & OOM & -- & -- & -- & Training terminates before usable output. \\
-\texttt{trial\_if\_perpneg\_lowmem} & IF, \texttt{perpneg}, \texttt{vram\_O}, $48\times48$ & 103.98 min & 13.8 GB & 1 & 1 & 1 & Very slow; output degenerates into volumetric noise. \\
-\texttt{trial\_perpneg\_if\_tiger\_baseline\_6000} & DSLR prompt, \texttt{perpneg}, \texttt{negative\_w=-3.0}, $48\times48$ & 69.62 min & 13.8 GB & 1 & 1 & 1 & Geometry collapses into a glowing sphere. \\
-\texttt{exp017\_if\_tiger} & DSLR prompt, no \texttt{perpneg}, \texttt{vram\_O}, $64\times64$ & 21.78 min & 17.6 GB & 4 & 4 & 4 & Best overall result; recognizable tiger doctor with coherent views. \\
+\shortstack[l]{trial\_if\\lowmem} & IF, \texttt{vram\_O}, $48\times48$ & 17.77 min & 12.0 GB & 2 & 1 & 2 & Stable but blurry; the object remains barely recognizable. \\
+\shortstack[l]{trial\_if\\lr3e4} & IF, \texttt{vram\_O}, $48\times48$, \texttt{lr=3e-4} & 17.44 min & 12.0 GB & 2 & 2 & 2 & Slightly clearer than the baseline, but still affected by semantic drift and strong artifacts. \\
+\shortstack[l]{trial\_if\\perpneg} & IF, \texttt{perpneg}, default $64\times64$ & early fail & OOM & -- & -- & -- & Training terminates before any usable output is produced. \\
+\shortstack[l]{trial\_if\\perpneg\\lowmem} & IF, \texttt{perpneg}, \texttt{vram\_O}, $48\times48$ & 103.98 min & 13.8 GB & 1 & 1 & 1 & The run is slow and converges to volumetric noise rather than a coherent subject. \\
+\shortstack[l]{trial\_perpneg\\if\_tiger\\baseline\_6000} & DSLR prompt, \texttt{perpneg}, \texttt{negative\_w=-3.0}, $48\times48$ & 69.62 min & 13.8 GB & 1 & 1 & 1 & The geometry collapses into a bright sphere and the tiger-doctor semantics disappear. \\
+\shortstack[l]{trial\_if\_tiger\\no\_perpneg\_64} & DSLR prompt, no \texttt{perpneg}, \texttt{vram\_O}, $64\times64$ & 21.78 min & 17.6 GB & 4 & 4 & 4 & Best overall result with recognizable appearance and consistent multi-view structure. \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{table*}
 
 \begin{figure*}[t]
@@ -98,7 +78,7 @@ Workspace / name & Key setting & Time & Peak VRAM & Geo. & Tex. & Cons. & Observ
     \includegraphics[width=0.24\linewidth]{../exp3/screenshots/trial-if-tiger-no-perpneg-64-3.png}\hfill
     \includegraphics[width=0.24\linewidth]{../exp3/screenshots/trial-if-tiger-no-perpneg-64-4.png}
     \Description{Four screenshots of the best MTN result showing a tiger dressed as a doctor from multiple viewpoints. The figure demonstrates a coherent orange tiger body, a white coat, and stable side and rear views.}
-    \caption{Best result from \texttt{exp017\_if\_tiger}, referred to in the plan as \texttt{trial\_if\_tiger\_no\_perpneg\_64}. The model produces a recognizable tiger doctor with a readable lab coat silhouette and substantially better multi-view consistency than the other runs.}
+    \caption{Best result from \texttt{trial\_if\_tiger\_no\_perpneg\_64}. The model produces a recognizable tiger doctor with a readable lab coat silhouette and substantially better multi-view consistency than the other runs.}
     \label{fig:best-result}
 \end{figure*}
 
@@ -108,24 +88,28 @@ The successful run in Figure~\ref{fig:best-result} is still imperfect. The lab c
 Two failures were especially informative because they represent different failure types.
 
 \subsection{F1: OOM as a Resource Failure}
-The default IF + \texttt{perpneg} run at $64\times64$ failed before producing any render. This is not a visual failure but a system failure: the pipeline could not finish enough optimization to output a usable frame. Therefore, the correct way to report this case is \textbf{not} to fabricate a screenshot. Instead, the report should explicitly state that no image exists and use log evidence as the primary artifact.
+The default IF + \texttt{perpneg} run at $64\times64$ terminated before the first valid render was produced, so the evidence for this case comes from runtime logs rather than output images. This makes it a resource failure rather than a visual failure.
 
-\begin{figure}[t]
+\begin{table}[t]
+\caption{Runtime evidence for the F1 OOM case.}
+\label{tab:f1-oom}
 \centering
-\fbox{%
-\parbox{0.93\linewidth}{%
-\textbf{F1 OOM evidence.}\\
-Command: \texttt{python main.py -O --text "a tiger dressed as a doctor" --workspace trial\_if\_perpneg --iters 6000 --batch\_size 1 --IF --perpneg}\\
-Observed symptom: training aborts before the first evaluation with \texttt{torch.OutOfMemoryError}.\\
-Supporting memory trace: a closely related $64\times64$ IF + \texttt{perpneg} run with \texttt{--vram\_O} already reaches \texttt{20.5GB} GPU usage in the provided log excerpt, which explains why the non-optimized variant exceeds the memory budget.\\
-Report treatment: cite logs and memory evidence rather than a non-existent render.
-}}
-\Description{A boxed text summary describing the out-of-memory failure, including the failed command, the early termination symptom, and the supporting 20.5GB GPU memory evidence from the logs.}
-\caption{Recommended presentation of the OOM case. Because no valid image was produced, F1 should be documented as log-based evidence rather than a visual figure.}
-\label{fig:f1-oom}
-\end{figure}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.12}
+\begin{tabular}{p{0.22\linewidth} p{0.70\linewidth}}
+\toprule
+Item & Evidence \\
+\midrule
+Command & \texttt{main.py -O --workspace trial\_if\_perpneg --IF --perpneg} with the tiger-doctor prompt and 6000 iterations. \\
+Symptom & Training aborts before the first evaluation with \texttt{torch.OutOfMemoryError: CUDA out of memory}. \\
+Memory evidence & A closely related $64\times64$ IF + \texttt{perpneg} run with \texttt{--vram\_O} already reaches \texttt{20.5GB} GPU usage in the log excerpt, leaving little headroom for the non-optimized setting. \\
+Implication & The configuration exceeds the practical memory budget on the available GPU and should be treated as an infeasible setup. \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-This distinction matters academically. A figure is appropriate only when the system produced a visual artifact. For OOM, the evidence chain is command configuration, runtime interruption, and memory trace. In this project, the \texttt{20.5GB} observation is particularly useful because it shows that even the optimized variant left very little headroom on a 24 GB-class GPU.
+The log evidence is sufficient to explain the failure mechanism: the combination of IF guidance, default resolution, and perpendicular negative prompting creates a memory load that is too high for the current hardware budget.
 
 \subsection{F2: Geometry Collapse under Strong Negative Guidance}
 Unlike F1, the DSLR prompt with \texttt{perpneg} and \texttt{negative\_w=-3.0} finished training, so it produced a proper visual failure case. Figure~\ref{fig:f2-collapse} shows that the output collapses into a bright orange sphere-like volume instead of a tiger doctor. This indicates that the system remained numerically stable while converging to an unusable geometry.
@@ -135,11 +119,11 @@ Unlike F1, the DSLR prompt with \texttt{perpneg} and \texttt{negative\_w=-3.0} f
     \includegraphics[width=0.48\linewidth]{../exp3/screenshots/f2-dslr-tiger-perpneg-1.png}\hfill
     \includegraphics[width=0.48\linewidth]{../exp3/screenshots/f2-dslr-tiger-perpneg-2.png}
     \Description{Two screenshots of the failure case under strong perpendicular negative guidance. Both views show a bright orange spherical object without recognizable tiger or doctor structure.}
-    \caption{F2 failure case from \texttt{trial\_perpneg\_if\_tiger\_baseline\_6000}. The model no longer represents a tiger doctor and instead collapses into a glowing volumetric sphere.}
+    \caption{F2 failure case under strong perpendicular negative guidance. The model no longer represents a tiger doctor and instead collapses into a glowing volumetric sphere.}
     \label{fig:f2-collapse}
 \end{figure}
 
-The contrast between F2 and the best run suggests that the prompt itself was not the core problem. The decisive factor was the guidance strategy. For this prompt, adding strong perpendicular negative guidance over-constrained the optimization and suppressed stable object formation.
+The contrast between F2 and \texttt{trial\_if\_tiger\_no\_perpneg\_64} suggests that the prompt itself was not the core problem. The decisive factor was the guidance strategy. For this prompt, adding strong perpendicular negative guidance over-constrained the optimization and suppressed stable object formation.
 
 \section{Hyper-Parameter Reflection}
 The experiments reveal three practical lessons.
@@ -148,7 +132,7 @@ First, memory-aware configuration is a prerequisite rather than a final optimiza
 
 Second, learning-rate adjustment had limited but real effect. The \texttt{lr=3e-4} baseline was slightly sharper than the default low-memory baseline, but the gain was incremental rather than transformative. This indicates that for this task, optimization hyper-parameters are secondary to prompt formulation and guidance design.
 
-Third, removing a harmful constraint can be more effective than adding stronger control. The strongest positive result came from deleting \texttt{perpneg} in the DSLR-prompt run. This change improved semantics, geometry, and consistency simultaneously, while also reducing runtime relative to the DSLR + \texttt{perpneg} comparison.
+Third, removing a harmful constraint can be more effective than adding stronger control. The strongest positive result came from deleting \texttt{perpneg} in \texttt{trial\_if\_tiger\_no\_perpneg\_64}. This change improved semantics, geometry, and consistency simultaneously, while also reducing runtime relative to the DSLR + \texttt{perpneg} comparison.
 
 \section{Improvement Suggestions}
 Based on the above observations, two concrete improvements are recommended.
@@ -160,7 +144,7 @@ Based on the above observations, two concrete improvements are recommended.
 An additional engineering recommendation is to add an early memory screening stage. A short pilot run of several epochs can reveal whether a configuration is already near the hardware limit, which would have flagged the OOM-prone settings sooner.
 
 \section{Conclusion}
-This experiment achieved the core lab goals: one presentable text-to-3D result was produced, GPU memory was monitored, at least two failures were analyzed, and hyper-parameter sensitivity was examined. The main conclusion is that for MTN under IF guidance, memory optimization is necessary but not sufficient. The decisive gain came from choosing a prompt and guidance combination that preserved semantic structure instead of over-constraining it. For the tiger-doctor prompt family, the best setting was the DSLR-style prompt without \texttt{perpneg} at $64\times64$, while the most informative failures were early OOM and guidance-induced geometry collapse.
+This experiment achieved the core lab goals: one presentable text-to-3D result was produced, GPU memory was monitored, at least two failures were analyzed, and hyper-parameter sensitivity was examined. The main conclusion is that for MTN under IF guidance, memory optimization is necessary but not sufficient. The decisive gain came from choosing a prompt and guidance combination that preserved semantic structure instead of over-constraining it. For the tiger-doctor prompt family, the no-perpneg DSLR run delivered the strongest overall result, while the most informative failures were early OOM and guidance-induced geometry collapse.
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{mtn_refs}

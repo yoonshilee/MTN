@@ -2,11 +2,10 @@
 
 ## Best Result
 
-- Plan name: `trial_if_tiger_no_perpneg_64`
-- Actual workspace: `exp017_if_tiger`
-- RGB video: `./exp017_if_tiger/results/df_ep0060_rgb.mp4`
-- Depth video: `./exp017_if_tiger/results/df_ep0060_depth.mp4`
-- Normal video: `./exp017_if_tiger/results/df_ep0060_normal.mp4`
+- Experiment name: `trial_if_tiger_no_perpneg_64`
+- RGB video: `./trial_if_tiger_no_perpneg_64/results/df_ep0060_rgb.mp4`
+- Depth video: `./trial_if_tiger_no_perpneg_64/results/df_ep0060_depth.mp4`
+- Normal video: `./trial_if_tiger_no_perpneg_64/results/df_ep0060_normal.mp4`
 
 ## Baseline Result
 
