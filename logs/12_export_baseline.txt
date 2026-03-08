@@ -1,0 +1,27 @@
+Baseline export summary
+
+Workspace: trial_if_lowmem
+
+Commands:
+python main.py --workspace trial_if_lowmem -O --test
+python main.py --workspace trial_if_lowmem -O --test --save_mesh
+
+Exported files:
+- RGB video: ./trial_if_lowmem/results/df_ep0060_rgb.mp4
+- Depth video: ./trial_if_lowmem/results/df_ep0060_depth.mp4
+- Normal video: ./trial_if_lowmem/results/df_ep0060_normal.mp4
+- Mesh: ./trial_if_lowmem/mesh/mesh.obj
+- Material: ./trial_if_lowmem/mesh/mesh.mtl
+- Texture: ./trial_if_lowmem/mesh/albedo.png
+
+Mesh statistics:
+- Vertices: 15022
+- Faces: 30056
+
+Subjective quality:
+- Geometry: 2/5
+- Texture: 1/5
+- Multi-view consistency: 2/5
+
+Summary:
+The exported result is recognizable only at a coarse level. The object can still be interpreted as a tiger, but the geometry is soft and unstable. The clothing area appears as blurred blue-white patches on the chest, and large disconnected color blocks reduce visual coherence. The mesh export is useful as a baseline artifact, but this run is not suitable as the final showcase result.
