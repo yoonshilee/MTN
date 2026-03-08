@@ -429,6 +429,96 @@ PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a DSL
 - 是否出现 OOM、输出噪声化或几何过度扁平化。
 - 与 `trial_if_perpneg_lowmem` 相比，提示词改为 `DSLR photo` 后，几何质量、纹理质量、多视角一致性是否改善。
 
+结果记录：
+
+- [x] 已执行 `trial_perpneg_if_tiger_baseline_6000` 训练
+- [x] 已自动生成文本日志与 CSV 日志
+- [x] 已完成测试视频导出
+- [ ] 已生成 `./logs/15_gpustat_perpneg_if_tiger_baseline_6000.txt`
+- [x] 本轮未发生 OOM
+- 训练记录：
+  - 实际执行命令：`PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a DSLR photo of a tiger dressed as a doctor" --workspace trial_perpneg_if_tiger_baseline_6000 --iters 6000 --IF --batch_size 1 --perpneg --negative_w -3.0 --vram_O --w 48 --h 48`
+  - 开始时间：`2026-03-08 14:37:13`
+  - 结束时间：`2026-03-08 15:45` 左右（测试导出完成）
+  - 总时长：约 `69.6215` 分钟
+  - 是否完成 6000 iter / 60 epoch（是/否）：是
+  - 是否 OOM（是/否）：否
+  - 其他报错：无致命报错；仅有 AMP 弃用警告、`TORCH_CUDA_ARCH_LIST` 提示，以及 `huggingface_hub` 的 `resume_download` FutureWarning
+  - 关键 loss 片段：`avg_loss` 基本稳定在 `1.0000 ~ 1.0001`
+  - 文本日志路径：`./logs/trial_perpneg_if_tiger_baseline_6000_log_df.txt`
+  - 结构化日志路径：`./logs/trial_perpneg_if_tiger_baseline_6000_train_metrics_df.csv`
+  - TensorBoard 路径：`./logs/tensorboard/trial_perpneg_if_tiger_baseline_6000/df/`
+  - 结果视频路径：`./trial_perpneg_if_tiger_baseline_6000/results/df_ep0060_rgb.mp4`
+  - 深度视频路径：`./trial_perpneg_if_tiger_baseline_6000/results/df_ep0060_depth.mp4`
+  - 法线视频路径：`./trial_perpneg_if_tiger_baseline_6000/results/df_ep0060_normal.mp4`
+  - 显存结论：训练日志显示 GPU 常驻约 `14.4 ~ 14.5GB`；按训练日志中的 `Peak_GPU` 字段统计，最高约 `13.3GB`，整体与 `trial_if_perpneg_lowmem` 同属高显存但可运行配置
+  - 稳定性结论：本轮在 `--negative_w -3.0` 与 `DSLR photo` 提示词设定下完整跑通，无 OOM，中后期各 epoch loss 基本无明显波动
+  - 质量结论：已完成人工查看结果视频，生成结果整体接近一个球体，未能形成可辨认的“老虎医生”三维结构，可判定为本轮训练失败；该结果表现为严重几何塌缩/过度平滑，主体语义未正确成形
+  - 主观判断：相较 `trial_if_perpneg_lowmem`，本轮 `DSLR photo + negative_w=-3.0` 设定没有带来可用质量提升，反而仍然落入明显失败模式，不适合作为最终展示结果
+  - 备注：本轮未附带独立 `gpustat` 输出，因此显存分析当前以训练日志为准；若后续要写入最终显存对比表，建议补充一次独立显存监控实验或在报告中注明数据来源差异
+
+#### 4.2.5 新增实验：验证 `num_steps / upsample_steps` 命令改写的实际影响
+
+计划目的：
+
+- 针对用户希望运行的命令，单独设计一组“参数表面变化但渲染主路径基本不变”的对照实验。
+- 重点确认：在保留 `-O` 的前提下，新增 `--num_steps 32 --upsample_steps 16` 是否真的影响训练结果。
+- 同时观察：移除 `--w 48 --h 48` 后回到默认 `64x64` 分辨率，是否会显著提高显存压力、训练时间与失败风险。
+
+用户原始想运行的命令：
+
+```bash
+python main.py -O --text "a DSLR photo of a tiger dressed as a doctor" --workspace trial_perpneg_if_tiger_baseline_6000 --iters 6000 --IF --batch_size 1 --perpneg --negative_w -3.0 --vram_O --num_steps 32 --upsample_steps 16
+```
+
+实验设计调整：
+
+- 不建议继续复用已有的 `trial_perpneg_if_tiger_baseline_6000` workspace，因为上一轮该目录已经产生“球体化失败结果”，继续复用会混淆 checkpoint、日志与结果视频。
+- 建议为这次新实验使用独立 workspace，便于和上一轮失败实验逐项对比。
+- 建议继续保留独立显存监控日志，避免再次缺失 `gpustat` 证据。
+- 已新建本轮实验 workspace：`./trial_perpneg_if_tiger_steps_test/`
+
+建议采用的实验命令（保持用户核心参数不变，仅更换 workspace 并补回显存碎片配置）：
+
+```bash
+gpustat --color -i 5 | tee ./logs/16_gpustat_perpneg_if_tiger_steps_test.txt
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a DSLR photo of a tiger dressed as a doctor" --workspace trial_perpneg_if_tiger_steps_test --iters 6000 --IF --batch_size 1 --perpneg --negative_w -3.0 --vram_O --num_steps 32 --upsample_steps 16
+```
+
+建议输出位置：
+
+- 显存日志：`./logs/16_gpustat_perpneg_if_tiger_steps_test.txt`
+- 文本日志：`./logs/trial_perpneg_if_tiger_steps_test_log_df.txt`
+- 结构化日志：`./logs/trial_perpneg_if_tiger_steps_test_train_metrics_df.csv`
+- 结果目录：`./trial_perpneg_if_tiger_steps_test/`
+
+执行说明：
+
+- 本轮请直接使用新 workspace `trial_perpneg_if_tiger_steps_test`，不要再写回 `trial_perpneg_if_tiger_baseline_6000`。
+- 这样可以避免加载到上一轮失败实验的旧 checkpoint，也便于后续把两轮实验结果分别写入对比表。
+
+重点观察项：
+
+- 是否出现 OOM。
+- 是否仍然生成“球体化”结果。
+- 训练时间是否明显高于上一轮 `trial_perpneg_if_tiger_baseline_6000`。
+- 显存峰值是否因默认回到 `64x64` 而明显高于上一轮。
+- 在保留 `-O` 的情况下，`--num_steps 32 --upsample_steps 16` 是否对结果产生可见影响。
+
+与上一轮实验命令的差异说明：
+
+- 上一轮命令为：`PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a DSLR photo of a tiger dressed as a doctor" --workspace trial_perpneg_if_tiger_baseline_6000 --iters 6000 --IF --batch_size 1 --perpneg --negative_w -3.0 --vram_O --w 48 --h 48`
+- 本次用户拟运行命令新增了 `--num_steps 32 --upsample_steps 16`。
+- 本次用户拟运行命令删除了 `--w 48 --h 48`，因此训练分辨率会回到默认 `64x64`，这通常比上一轮更占显存，也更容易失败。
+- 本次用户拟运行命令没有写 `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True`，因此在显存碎片较严重时，稳定性可能略差于上一轮。
+- 更关键的是：由于命令中仍然保留 `-O`，程序会启用 `--cuda_ray`；在这种设置下，`--num_steps` 和 `--upsample_steps` 通常不会像用户直觉那样真正控制主训练路径的采样步数，因此它们大概率不会带来与“降低步数”相匹配的显著提速或降显存效果。
+
+预期结论：
+
+- 这组实验的真正有效变化，主要不是 `--num_steps 32 --upsample_steps 16`，而是“去掉了 `--w 48 --h 48`，回到默认 `64x64`”。
+- 因此，相比上一轮实验，这次更可能出现的是：显存更高、耗时更长、失败风险更大；而不是因为 `num_steps` 下降而显著更轻量。
+- 若本实验再次失败，则可以较有把握地说明：在 `-O` 模式下，问题核心不在 `num_steps / upsample_steps`，而在 `IF + perpneg + 默认分辨率 + 强负权重` 这一组合本身。
+
 ### 4.3 导出视频与网格
 
 可复制执行命令：
