@@ -15,6 +15,13 @@
 \newcolumntype{Y}{>{\raggedright\arraybackslash}X}
 \newcommand{\ws}[1]{\parbox[t]{2.25cm}{\raggedright\ttfamily #1}}
 
+\setlength{\textfloatsep}{8pt plus 2pt minus 2pt}
+\setlength{\floatsep}{6pt plus 2pt minus 2pt}
+\setlength{\intextsep}{8pt plus 2pt minus 2pt}
+\setlength{\dbltextfloatsep}{8pt plus 2pt minus 2pt}
+\setlength{\abovecaptionskip}{4pt}
+\setlength{\belowcaptionskip}{0pt}
+
 \title[Experiment Report on Text-to-3D Generation with MTN]{Experiment Report on Text-to-3D Generation with MTN: A Tiger Doctor Case Study}
 
 \author{Ruiheng Li}
@@ -74,7 +81,7 @@ Workspace / name & Key setting & Time & Peak VRAM & Geo. & Tex. & Cons. & Observ
 \end{tabularx}
 \end{table*}
 
-\begin{figure}[t]
+\begin{figure}[!t]
     \centering
     \includegraphics[width=0.235\linewidth]{../exp3/screenshots/trial-if-tiger-no-perpneg-64-1.png}\hfill
     \includegraphics[width=0.235\linewidth]{../exp3/screenshots/trial-if-tiger-no-perpneg-64-2.png}\hfill
@@ -90,7 +97,7 @@ The successful run in Figure~\ref{fig:best-result} is still imperfect. The four 
 \section{Detailed Observations}
 The low-memory IF baseline, \path{trial_if_lowmem}, established a useful reference for the rest of the study. It finished in 17.77 minutes with a peak memory reading of approximately 12.0 GB, which confirms that the low-resolution configuration is easy to sustain on the available GPU. Its weakness was visual quality rather than stability: the subject remained blurry, the coat region was fragmented, and the overall appearance was only barely recognizable as a tiger doctor, as shown in Figure~\ref{fig:lowmem-result}.
 
-\begin{figure}[t]
+\begin{figure}[!t]
     \centering
     \includegraphics[width=0.235\linewidth]{../exp3/screenshots/trial-if-lomen-1.png}\hfill
     \includegraphics[width=0.235\linewidth]{../exp3/screenshots/trial-if-lomen-2.png}\hfill
@@ -105,7 +112,7 @@ Viewed across the four screenshots in Figure~\ref{fig:lowmem-result}, the baseli
 
 The learning-rate variant, \path{trial_if_lr3e4}, preserved essentially the same runtime and memory profile while producing a small sharpness improvement. Even so, the recorded observations show that this gain was limited. The coat drifted toward orange, edge noise remained obvious, and duplicated tail-like structures appeared, as shown in Figure~\ref{fig:lr3e4-result}, so the run is best interpreted as a modest optimization tweak rather than a qualitatively better solution.
 
-\begin{figure}[t]
+\begin{figure}[!t]
     \centering
     \includegraphics[width=0.235\linewidth]{../exp3/screenshots/trial-if-lr3e4-1.png}\hfill
     \includegraphics[width=0.235\linewidth]{../exp3/screenshots/trial-if-lr3e4-2.png}\hfill
@@ -128,7 +135,7 @@ Two failures were especially informative because they represent different failur
 \subsection{F1: OOM as a Resource Failure}
 The default IF + \texttt{perpneg} run at $64\times64$ terminated before the first valid render was produced, so the evidence for this case comes from runtime logs rather than output images. This makes it a resource failure rather than a visual one.
 
-\begin{table}[t]
+\begin{table}[!t]
 \caption{Runtime evidence for the F1 OOM case.}
 \label{tab:f1-oom}
 \centering
@@ -152,7 +159,7 @@ The log evidence is sufficient to explain the failure mechanism: the combination
 \subsection{F2: Geometry Collapse under Strong Negative Guidance}
 Unlike F1, the DSLR prompt with \texttt{perpneg} and \texttt{negative\_w=-3.0} finished training, so it produced a genuine visual failure case. Figure~\ref{fig:f2-collapse} shows that the output collapses into a bright orange sphere-like volume instead of a tiger doctor. This indicates that the system remained numerically stable while converging to an unusable geometry.
 
-\begin{figure}[t]
+\begin{figure}[!t]
     \centering
     \includegraphics[width=0.48\linewidth]{../exp3/screenshots/f2-dslr-tiger-perpneg-1.png}\hfill
     \includegraphics[width=0.48\linewidth]{../exp3/screenshots/f2-dslr-tiger-perpneg-2.png}
