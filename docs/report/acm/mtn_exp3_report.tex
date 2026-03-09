@@ -13,42 +13,45 @@
 \usepackage{tabularx}
 
 \newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcommand{\ws}[1]{\parbox[t]{2.25cm}{\raggedright\ttfamily #1}}
 
 \title[Experiment Report on Text-to-3D Generation with MTN]{Experiment Report on Text-to-3D Generation with MTN: A Tiger Doctor Case Study}
 
-\author{Student Name}
+\author{Ruiheng Li}
 \affiliation{%
   \institution{University of Macau}
   \city{Macau}
   \country{China}
 }
-\email{student@um.edu.mo}
+\email{mc56507@um.edu.mo}
 
 \begin{document}
 
 \begin{abstract}
-This report studies text-to-3D generation with MTN under a course-style experimental setting. The target prompt is \textit{a tiger dressed as a doctor}, and the goal is to obtain at least one usable 3D result, monitor GPU memory behavior, analyze failures, and examine hyper-parameter sensitivity. Six representative runs were organized around DeepFloyd-IF guidance, resolution control, learning-rate adjustment, and perpendicular negative prompting. The best result was produced by a DSLR-style prompt without \texttt{perpneg} at $64\times 64$, while the most severe failures were early out-of-memory termination and geometry collapse into a glowing sphere. The experiments show that prompt formulation and guidance configuration matter more than simply increasing constraint strength, and that memory-aware configuration is necessary before visual quality can even be discussed.
+This report presents a course experiment on text-to-3D generation with MTN. Using the prompt \textit{a tiger dressed as a doctor}, the study aims to obtain at least one usable 3D result, monitor GPU memory usage, analyze representative failures, and examine hyper-parameter sensitivity. Six representative runs were organized around DeepFloyd-IF guidance, resolution control, learning-rate adjustment, and perpendicular negative prompting. The best result was obtained with a DSLR-style prompt without \texttt{perpneg} at $64\times 64$, while the most severe failures were early out-of-memory termination and geometry collapse into a glowing sphere. Overall, the experiments indicate that prompt formulation and guidance design matter more than simply increasing constraint strength, and that memory-aware configuration is a prerequisite for reliable visual quality.
 \end{abstract}
 
 \maketitle
 
 \section{Introduction}
-Recent text-to-3D systems optimize a radiance field or related 3D representation by matching rendered views against large diffusion priors \cite{poole2022dreamfusion, yi2026progressive}. MTN is a practical implementation of this idea, and its repository exposes a number of user-facing controls such as diffusion backbone, image resolution, learning rate, and negative-guidance settings \cite{texaser-mtn-repo}. In practice, these controls are tightly coupled: a setting that improves one prompt may destabilize another, and an apparently minor change can shift the bottleneck from semantic alignment to GPU memory.
+Recent text-to-3D systems commonly optimize a radiance field or a related 3D representation by matching rendered views against large diffusion priors \cite{poole2022dreamfusion, yi2026progressive}. MTN is a practical implementation of this idea, and its repository exposes several user-facing controls, including the diffusion backbone, image resolution, learning rate, and negative-guidance settings \cite{texaser-mtn-repo}. In practice, these controls are strongly coupled: a configuration that improves one prompt may destabilize another, and a seemingly minor change can shift the bottleneck from semantic alignment to GPU memory.
 
-This report focuses on a single prompt family, \textit{tiger doctor}, because it is semantically rich enough to expose both appearance and geometry failures. The report has three goals. First, it documents the final successful result and the commands that produced it. Second, it treats failures as first-class outcomes rather than discarded runs. Third, it summarizes which hyper-parameters were helpful, harmful, or simply too expensive for the available hardware budget.
+This report focuses on a single prompt family, \textit{tiger doctor}, because it is semantically rich enough to reveal both appearance and geometry failures. The report has three goals. First, it documents the final successful result and the commands that produced it. Second, it analyzes failed runs as informative experimental outcomes rather than discarded attempts. Third, it summarizes which hyper-parameters were helpful, harmful, or simply too expensive for the available hardware budget.
 
 \section{Experimental Setup}
 All experiments were conducted in the MTN codebase \cite{texaser-mtn-repo} using the IF guidance path. The recorded environment in the lab notes was Python 3.9, CUDA 12.8, and PyTorch 2.8.0. GPU usage was monitored with \texttt{gpustat}, and the logs indicate an approximately 24.6 GB GPU budget. Each run used 6000 iterations with batch size 1. Qualitative evaluation followed the course requirement: the resulting 360$^{\circ}$ videos were inspected for geometry integrity, texture quality, and multi-view consistency.
 
-The experiments covered three groups:
+The experiments were organized into three groups:
 \begin{itemize}
     \item Low-memory baselines at $48\times 48$ for stable comparison.
     \item Resource-stress runs with \texttt{perpneg} to expose memory and optimization failures.
     \item DSLR-style prompt refinement to test whether better prompt phrasing outperforms stronger negative guidance.
 \end{itemize}
 
+Unless otherwise stated, all runs were launched with the repository shortcut \texttt{-O}, batch size 1, and 6000 iterations. This common setup is important when reading the logs because the project defaults are not neutral: under \texttt{-O}, the CUDA ray-marching path is enabled, so the most consequential experimental variables in practice were image resolution, \texttt{vram\_O}, the learning rate, and whether perpendicular negative guidance was enabled.
+
 \section{Main Results}
-Table~\ref{tab:results} summarizes the most relevant runs. The low-memory IF baseline was stable but blurry. Increasing the learning rate from $1\times 10^{-3}$ to $3\times 10^{-4}$ under the project's effective scheduler setting slightly improved sharpness, but did not solve semantic drift or shape artifacts. The most important observation came from the DSLR prompt experiments: removing \texttt{perpneg} produced the only clearly presentable result, while keeping strong negative guidance caused geometry collapse even when the run completed.
+Table~\ref{tab:results} summarizes the most relevant runs. The low-memory IF baseline was stable but blurry. Increasing the learning rate from $1\times 10^{-3}$ to $3\times 10^{-4}$ slightly improved sharpness, but did not resolve semantic drift or shape artifacts. The most important observation came from the DSLR-prompt experiments: removing \texttt{perpneg} produced the only clearly presentable result, whereas keeping strong negative guidance led to geometry collapse even when training completed successfully.
 
 \begin{table*}[t]
 \caption{Summary of representative MTN runs for the tiger-doctor prompt family. Geometry, texture, and consistency are subjective scores on a 1--4 scale derived from the experiment log.}
@@ -57,38 +60,73 @@ Table~\ref{tab:results} summarizes the most relevant runs. The low-memory IF bas
 \footnotesize
 \setlength{\tabcolsep}{4pt}
 \renewcommand{\arraystretch}{1.15}
-\begin{tabularx}{\textwidth}{p{2.3cm} p{2.7cm} c c c c c Y}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.25cm} >{\raggedright\arraybackslash}p{2.65cm} >{\centering\arraybackslash}p{1.15cm} >{\centering\arraybackslash}p{1.2cm} >{\centering\arraybackslash}p{0.55cm} >{\centering\arraybackslash}p{0.55cm} >{\centering\arraybackslash}p{0.7cm} Y}
 \toprule
 Workspace / name & Key setting & Time & Peak VRAM & Geo. & Tex. & Cons. & Observation \\
 \midrule
-\shortstack[l]{trial\_if\\lowmem} & IF, \texttt{vram\_O}, $48\times48$ & 17.77 min & 12.0 GB & 2 & 1 & 2 & Stable but blurry; the object remains barely recognizable. \\
-\shortstack[l]{trial\_if\\lr3e4} & IF, \texttt{vram\_O}, $48\times48$, \texttt{lr=3e-4} & 17.44 min & 12.0 GB & 2 & 2 & 2 & Slightly clearer than the baseline, but still affected by semantic drift and strong artifacts. \\
-\shortstack[l]{trial\_if\\perpneg} & IF, \texttt{perpneg}, default $64\times64$ & early fail & OOM & -- & -- & -- & Training terminates before any usable output is produced. \\
-\shortstack[l]{trial\_if\\perpneg\\lowmem} & IF, \texttt{perpneg}, \texttt{vram\_O}, $48\times48$ & 103.98 min & 13.8 GB & 1 & 1 & 1 & The run is slow and converges to volumetric noise rather than a coherent subject. \\
-\shortstack[l]{trial\_perpneg\\if\_tiger\\baseline\_6000} & DSLR prompt, \texttt{perpneg}, \texttt{negative\_w=-3.0}, $48\times48$ & 69.62 min & 13.8 GB & 1 & 1 & 1 & The geometry collapses into a bright sphere and the tiger-doctor semantics disappear. \\
-\shortstack[l]{trial\_if\_tiger\\no\_perpneg\_64} & DSLR prompt, no \texttt{perpneg}, \texttt{vram\_O}, $64\times64$ & 21.78 min & 17.6 GB & 4 & 4 & 4 & Best overall result with recognizable appearance and consistent multi-view structure. \\
+\ws{trial\_if\_\\lowmem} & IF, \texttt{vram\_O}, $48\times48$ & 17.77 min & 12.0 GB & 2 & 1 & 2 & Stable but blurry; the object remains barely recognizable. \\
+\ws{trial\_if\_\\lr3e4} & IF, \texttt{vram\_O}, $48\times48$, \texttt{lr=3e-4} & 17.44 min & 12.0 GB & 2 & 2 & 2 & Slightly clearer than the baseline, but still affected by semantic drift and strong artifacts. \\
+\ws{trial\_if\_\\perpneg} & IF, \texttt{perpneg}, default $64\times64$ & early fail & OOM & -- & -- & -- & Training terminates before any usable output is produced. \\
+\ws{trial\_if\_\\perpneg\_\\lowmem} & IF, \texttt{perpneg}, \texttt{vram\_O}, $48\times48$ & 103.98 min & 13.8 GB & 1 & 1 & 1 & The run is slow and converges to volumetric noise rather than a coherent subject. \\
+\ws{trial\_perpneg\_\\if\_tiger\_\\baseline\_6000} & DSLR prompt, \texttt{perpneg}, \texttt{negative\_w=-3.0}, $48\times48$ & 69.62 min & 13.8 GB & 1 & 1 & 1 & The geometry collapses into a bright sphere and the tiger-doctor semantics disappear. \\
+\ws{trial\_if\_tiger\_\\no\_perpneg\_64} & DSLR prompt, no \texttt{perpneg}, \texttt{vram\_O}, $64\times64$ & 21.78 min & 17.6 GB & 4 & 4 & 4 & Best overall result with recognizable appearance and consistent multi-view structure. \\
 \bottomrule
 \end{tabularx}
 \end{table*}
 
-\begin{figure*}[t]
+\begin{figure}[t]
     \centering
-    \includegraphics[width=0.24\linewidth]{../exp3/screenshots/trial-if-tiger-no-perpneg-64-1.png}\hfill
-    \includegraphics[width=0.24\linewidth]{../exp3/screenshots/trial-if-tiger-no-perpneg-64-2.png}\hfill
-    \includegraphics[width=0.24\linewidth]{../exp3/screenshots/trial-if-tiger-no-perpneg-64-3.png}\hfill
-    \includegraphics[width=0.24\linewidth]{../exp3/screenshots/trial-if-tiger-no-perpneg-64-4.png}
+    \includegraphics[width=0.235\linewidth]{../exp3/screenshots/trial-if-tiger-no-perpneg-64-1.png}\hfill
+    \includegraphics[width=0.235\linewidth]{../exp3/screenshots/trial-if-tiger-no-perpneg-64-2.png}\hfill
+    \includegraphics[width=0.235\linewidth]{../exp3/screenshots/trial-if-tiger-no-perpneg-64-3.png}\hfill
+    \includegraphics[width=0.235\linewidth]{../exp3/screenshots/trial-if-tiger-no-perpneg-64-4.png}
     \Description{Four screenshots of the best MTN result showing a tiger dressed as a doctor from multiple viewpoints. The figure demonstrates a coherent orange tiger body, a white coat, and stable side and rear views.}
     \caption{Best result from \texttt{trial\_if\_tiger\_no\_perpneg\_64}. The model produces a recognizable tiger doctor with a readable lab coat silhouette and substantially better multi-view consistency than the other runs.}
     \label{fig:best-result}
-\end{figure*}
+\end{figure}
 
-The successful run in Figure~\ref{fig:best-result} is still imperfect. The lab coat is somewhat over-smoothed, the face remains slightly blurry, and Janus-like ambiguity is still visible around the head. However, compared with all baseline and failure cases, this run is the only one that consistently preserves identity, clothing semantics, and body shape across viewpoints.
+The successful run in Figure~\ref{fig:best-result} is still imperfect. The four views show a stable upright body, a readable white coat, and recognizable tiger stripes, which is why this run stands out from the others. At the same time, the lab coat is somewhat over-smoothed, the face remains slightly blurry, and Janus-like ambiguity is still visible around the head. However, compared with all baseline and failure cases, this run is the only one that consistently preserves subject identity, clothing semantics, and body shape across viewpoints.
+
+\section{Detailed Observations}
+The low-memory IF baseline, \path{trial_if_lowmem}, established a useful reference for the rest of the study. It finished in 17.77 minutes with a peak memory reading of approximately 12.0 GB, which confirms that the low-resolution configuration is easy to sustain on the available GPU. Its weakness was visual quality rather than stability: the subject remained blurry, the coat region was fragmented, and the overall appearance was only barely recognizable as a tiger doctor, as shown in Figure~\ref{fig:lowmem-result}.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.235\linewidth]{../exp3/screenshots/trial-if-lomen-1.png}\hfill
+    \includegraphics[width=0.235\linewidth]{../exp3/screenshots/trial-if-lomen-2.png}\hfill
+    \includegraphics[width=0.235\linewidth]{../exp3/screenshots/trial-if-lomen-3.png}\hfill
+    \includegraphics[width=0.235\linewidth]{../exp3/screenshots/trial-if-lomen-4.png}
+    \Description{Four screenshots of the low-memory IF baseline. The object is blurry and weakly structured, with only a rough tiger-doctor silhouette visible from different views.}
+    \caption{Low-memory IF baseline from \texttt{trial\_if\_lowmem}. The run is stable, but the subject remains blurry and weakly defined across viewpoints.}
+    \label{fig:lowmem-result}
+\end{figure}
+
+Viewed across the four screenshots in Figure~\ref{fig:lowmem-result}, the baseline subject keeps a rough humanoid outline but fails to maintain clean boundaries between the head, torso, and clothing. The figure therefore matches the qualitative judgment in the log: stable optimization was achieved, but representational quality remained too weak for final presentation.
+
+The learning-rate variant, \path{trial_if_lr3e4}, preserved essentially the same runtime and memory profile while producing a small sharpness improvement. Even so, the recorded observations show that this gain was limited. The coat drifted toward orange, edge noise remained obvious, and duplicated tail-like structures appeared, as shown in Figure~\ref{fig:lr3e4-result}, so the run is best interpreted as a modest optimization tweak rather than a qualitatively better solution.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.235\linewidth]{../exp3/screenshots/trial-if-lr3e4-1.png}\hfill
+    \includegraphics[width=0.235\linewidth]{../exp3/screenshots/trial-if-lr3e4-2.png}\hfill
+    \includegraphics[width=0.235\linewidth]{../exp3/screenshots/trial-if-lr3e4-3.png}\hfill
+    \includegraphics[width=0.235\linewidth]{../exp3/screenshots/trial-if-lr3e4-4.png}
+    \Description{Four screenshots of the learning-rate variant at lr equals 3e-4. The tiger-doctor shape is somewhat clearer than the low-memory baseline, but visible artifacts and semantic drift remain.}
+    \caption{Learning-rate comparison run from \texttt{trial\_if\_lr3e4}. Sharpness improves slightly, but artifacts and semantic drift remain obvious.}
+    \label{fig:lr3e4-result}
+\end{figure}
+
+Figure~\ref{fig:lr3e4-result} makes the limited improvement easier to see. The body silhouette is more legible than in the low-memory baseline, but the orange clothing, fuzzy facial structure, and unstable side views confirm that this run still falls short of a convincing tiger-doctor identity.
+
+The low-memory \texttt{perpneg} run clarifies an important trade-off in this project. After adding \texttt{vram\_O} and reducing the resolution to $48\times48$, \path{trial_if_perpneg_lowmem} no longer crashed, but it required 103.98 minutes and still produced mainly volumetric noise. This means the intervention solved the feasibility problem without solving the representation problem. For this prompt family, making \texttt{perpneg} fit in memory did not make it useful.
+
+The strongest mechanism-level comparison came from the DSLR-prompt pair. With \texttt{perpneg} and \texttt{negative\_w=-3.0}, \path{trial_perpneg_if_tiger_baseline_6000} completed after 69.62 minutes but collapsed into a bright spherical volume. When \texttt{perpneg} was removed while the DSLR-style prompt was retained, \path{trial_if_tiger_no_perpneg_64} finished in only 21.78 minutes and became the only run with scores of 4 in geometry, texture, and consistency. This direct contrast is the clearest evidence in the experiment that prompt refinement was beneficial, whereas overly strong negative guidance was destructive.
 
 \section{Failure Analysis}
 Two failures were especially informative because they represent different failure types.
 
 \subsection{F1: OOM as a Resource Failure}
-The default IF + \texttt{perpneg} run at $64\times64$ terminated before the first valid render was produced, so the evidence for this case comes from runtime logs rather than output images. This makes it a resource failure rather than a visual failure.
+The default IF + \texttt{perpneg} run at $64\times64$ terminated before the first valid render was produced, so the evidence for this case comes from runtime logs rather than output images. This makes it a resource failure rather than a visual one.
 
 \begin{table}[t]
 \caption{Runtime evidence for the F1 OOM case.}
@@ -109,10 +147,10 @@ Implication & The configuration exceeds the practical memory budget on the avail
 \end{tabular}
 \end{table}
 
-The log evidence is sufficient to explain the failure mechanism: the combination of IF guidance, default resolution, and perpendicular negative prompting creates a memory load that is too high for the current hardware budget.
+The log evidence is sufficient to explain the failure mechanism: the combination of IF guidance, default resolution, and perpendicular negative prompting creates a memory load that exceeds the practical hardware budget.
 
 \subsection{F2: Geometry Collapse under Strong Negative Guidance}
-Unlike F1, the DSLR prompt with \texttt{perpneg} and \texttt{negative\_w=-3.0} finished training, so it produced a proper visual failure case. Figure~\ref{fig:f2-collapse} shows that the output collapses into a bright orange sphere-like volume instead of a tiger doctor. This indicates that the system remained numerically stable while converging to an unusable geometry.
+Unlike F1, the DSLR prompt with \texttt{perpneg} and \texttt{negative\_w=-3.0} finished training, so it produced a genuine visual failure case. Figure~\ref{fig:f2-collapse} shows that the output collapses into a bright orange sphere-like volume instead of a tiger doctor. This indicates that the system remained numerically stable while converging to an unusable geometry.
 
 \begin{figure}[t]
     \centering
@@ -126,11 +164,11 @@ Unlike F1, the DSLR prompt with \texttt{perpneg} and \texttt{negative\_w=-3.0} f
 The contrast between F2 and \texttt{trial\_if\_tiger\_no\_perpneg\_64} suggests that the prompt itself was not the core problem. The decisive factor was the guidance strategy. For this prompt, adding strong perpendicular negative guidance over-constrained the optimization and suppressed stable object formation.
 
 \section{Hyper-Parameter Reflection}
-The experiments reveal three practical lessons.
+The experiments suggest three practical lessons.
 
 First, memory-aware configuration is a prerequisite rather than a final optimization. Lowering the render resolution from $64\times64$ to $48\times48$ and enabling \texttt{vram\_O} successfully avoided OOM in several runs, but this alone did not guarantee visual quality. In fact, the low-memory \texttt{perpneg} run took 103.98 minutes and still produced unusable 3D noise.
 
-Second, learning-rate adjustment had limited but real effect. The \texttt{lr=3e-4} baseline was slightly sharper than the default low-memory baseline, but the gain was incremental rather than transformative. This indicates that for this task, optimization hyper-parameters are secondary to prompt formulation and guidance design.
+Second, learning-rate adjustment had a limited but measurable effect. The \texttt{lr=3e-4} baseline was slightly sharper than the default low-memory baseline, but the gain was incremental rather than transformative. This indicates that, for this task, optimization hyper-parameters are secondary to prompt formulation and guidance design.
 
 Third, removing a harmful constraint can be more effective than adding stronger control. The strongest positive result came from deleting \texttt{perpneg} in \texttt{trial\_if\_tiger\_no\_perpneg\_64}. This change improved semantics, geometry, and consistency simultaneously, while also reducing runtime relative to the DSLR + \texttt{perpneg} comparison.
 
@@ -143,8 +181,11 @@ Based on the above observations, two concrete improvements are recommended.
 
 An additional engineering recommendation is to add an early memory screening stage. A short pilot run of several epochs can reveal whether a configuration is already near the hardware limit, which would have flagged the OOM-prone settings sooner.
 
+\section{Artifacts and Deliverables}
+The project artifacts are consistent with the course requirement. For the baseline workspace, MTN successfully exported RGB, depth, and normal videos, and also generated a mesh with texture files, confirming that the full train-to-export pipeline was functional. For the final report, the best run contributes four screenshots sampled from its RGB video, while the failure section combines one log-based resource failure and one screenshot-based visual failure. This organization keeps the evidence aligned with what each run actually produced instead of forcing all cases into the same presentation format.
+
 \section{Conclusion}
-This experiment achieved the core lab goals: one presentable text-to-3D result was produced, GPU memory was monitored, at least two failures were analyzed, and hyper-parameter sensitivity was examined. The main conclusion is that for MTN under IF guidance, memory optimization is necessary but not sufficient. The decisive gain came from choosing a prompt and guidance combination that preserved semantic structure instead of over-constraining it. For the tiger-doctor prompt family, the no-perpneg DSLR run delivered the strongest overall result, while the most informative failures were early OOM and guidance-induced geometry collapse.
+This experiment achieved the core lab goals: one presentable text-to-3D result was produced, GPU memory was monitored, at least two failures were analyzed, and hyper-parameter sensitivity was examined. The main conclusion is that, for MTN under IF guidance, memory optimization is necessary but not sufficient. The decisive improvement came from choosing a prompt and guidance configuration that preserved semantic structure instead of over-constraining it. For the tiger-doctor prompt family, the no-perpneg DSLR run delivered the strongest overall result, while the most informative failures were early OOM and guidance-induced geometry collapse.
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{mtn_refs}

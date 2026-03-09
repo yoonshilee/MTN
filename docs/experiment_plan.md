@@ -1,6 +1,6 @@
 # MTN 实验计划与当前进展
 
-本文档基于 `docs/requirement.md`、`README.md` 和当前工作区已有产出整理，按照实验从上到下的实际执行顺序组织。所有步骤均改为可勾选清单；已完成内容直接标记，未完成内容保留空白勾选框。
+本文档基于 `docs/requirement.md`、`README.md` 以及当前工作区的已有产出整理，按照实验的实际执行顺序自上而下组织。所有步骤均整理为可勾选清单；已完成内容直接标记，未完成内容保留空白勾选框。
 
 ## 1. 实验目标与最终交付
 
@@ -12,9 +12,9 @@
 - [x] 建立 artifacts 索引
 - [ ] 补齐失败分析与超参数研究成稿
 
-最终报告建议采用：
+最终报告建议如下：
 
-- 最佳结果：4.7 实验，文档内统一命名为 `trial_if_tiger_no_perpneg_64`。
+- 最佳结果采用 4.7 实验，文档内统一命名为 `trial_if_tiger_no_perpneg_64`。
 
 ## 2. 环境准备与前置条件
 
@@ -82,7 +82,7 @@ PY
 | `trial_if_perpneg` | `trial_if_perpneg` | `--IF --perpneg` 默认 `64x64` | 数秒内失败 | OOM | 失败案例，证明默认 IF+perpneg 过重 |
 | `trial_if_perpneg_lowmem` | `trial_if_perpneg_lowmem` | `--IF --perpneg --vram_O --w 48 --h 48` | 约 103.98 min | 峰值约 `13.8GB`，稳定但很慢 | 呈现立体噪声，不适合作为展示结果 |
 | `trial_perpneg_if_tiger_baseline_6000` | `trial_perpneg_if_tiger_baseline_6000` | `DSLR prompt + --perpneg --negative_w -3.0` | 约 69.62 min | 高显存但未 OOM | 呈现大型立体光球，严重失败 |
-| `trial_if_tiger_no_perpneg_64` | `trial_if_tiger_no_perpneg_64` | `DSLR prompt`，去掉 `perpneg`，`64x64` | 约 21.78 min | 显存更高但稳定 | 当前最清晰、最适合作为最佳结果 |
+| `trial_if_tiger_no_perpneg_64` | `trial_if_tiger_no_perpneg_64` | `DSLR prompt`，去掉 `perpneg`，`64x64` | 约 21.78 min | 显存更高但稳定 | 当前结果最清晰，最适合作为最佳结果 |
 
 ## 4. 实验执行与结果记录
 
@@ -106,7 +106,7 @@ PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a tig
 - 结果视频：`./trial_if_lowmem/results/df_ep0060_rgb.mp4`
 - 深度视频：`./trial_if_lowmem/results/df_ep0060_depth.mp4`
 - 法线视频：`./trial_if_lowmem/results/df_ep0060_normal.mp4`
-- 质量描述：图像整体模糊，只能勉强识别为老虎；头部与胸前可勉强看出蓝白色模糊衣物，但整体呈现大面积不连续色块，结构不稳定。
+- 质量描述：图像整体较为模糊，仅能勉强辨认为老虎；头部与胸前可隐约看出蓝白色衣物，但整体存在大面积不连续色块，结构稳定性较差。
 
 主观评分：
 
@@ -150,7 +150,7 @@ PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a tig
 
 结论：
 
-- 比低显存基线略有提升，但仍存在明显结构与语义错误。
+- 相比低显存基线略有提升，但仍存在明显的结构错误与语义偏移。
 - 不再作为最佳结果，改为超参数对比中的中间结果。
 
 ### 4.3 高开销失败案例：默认 `IF + perpneg`
@@ -194,7 +194,7 @@ PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a tig
 - 结果视频：`./trial_if_perpneg_lowmem/results/df_ep0060_rgb.mp4`
 - 训练时长：约 `103.9772` 分钟
 - 峰值显存：约 `13.8GB`
-- 质量描述：结果主要表现为立体噪声，虽然保持三维体积感，但无法形成有效主体。
+- 质量描述：结果主要表现为立体噪声，虽然保留了一定三维体积感，但未能形成有效主体。
 
 主观评分：
 
@@ -237,7 +237,7 @@ PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a DSL
 - 显存日志：`./logs/15_gpustat_perpneg_if_tiger_baseline_6000.txt`
 - 结果视频：`./trial_perpneg_if_tiger_baseline_6000/results/df_ep0060_rgb.mp4`
 - 训练时长：约 `69.6215` 分钟
-- 质量描述：整体呈现为大型立体光球，虽然有体积感和发光感，但完全没有形成可辨认的老虎医生结构。
+- 质量描述：结果整体呈现为大型立体光球，虽然具有一定体积感和发光感，但未形成可辨认的“老虎医生”结构。
 
 主观评分：
 
@@ -255,7 +255,7 @@ PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python main.py -O --text "a DSL
 - [x] 已完成该实验
 - [x] 已生成日志、显存记录与测试视频
 - [x] 已确定为本次实验最佳结果
-- [ ] 如需统一截图素材，后续补导出到报告目录即可
+- [ ] 如需统一截图素材，后续可补充导出并整理到报告目录
 
 文档统一命名：`trial_if_tiger_no_perpneg_64`
 
@@ -276,7 +276,7 @@ python main.py -O --text "a DSLR photo of a tiger dressed as a doctor" --workspa
 - 法线视频：`./trial_if_tiger_no_perpneg_64/results/df_ep0060_normal.mp4`
 - 训练时长：约 `21.7783` 分钟
 - 显存结论：GPU 常驻约 `17.4 ~ 17.6GB`，明显高于 `48x48` 低显存基线
-- 质量描述：这是当前唯一生成结果清晰的实验。主体能够明确识别为老虎，多视角连贯性明显优于前面几组；虽然仍存在服装不够自然、局部轻微模糊以及头部 Janus 伪影，但整体已经形成稳定且可展示的三维主体。
+- 质量描述：这是当前唯一生成结果较为清晰的实验。主体能够明确识别为老虎，多视角连贯性明显优于前面几组；虽然仍存在服装不够自然、局部轻微模糊以及头部 Janus 伪影，但整体已形成稳定且可展示的三维主体。
 
 主观评分：
 
@@ -286,7 +286,7 @@ python main.py -O --text "a DSLR photo of a tiger dressed as a doctor" --workspa
 
 结论：
 
-- 本实验最佳结果采用 4.6。
+- 本次实验的最佳结果采用 4.6。
 - 与 4.5 相比，去掉 `perpneg` 后质量提升非常明显，是报告中最关键的正向结果。
 
 ## 5. 导出结果与素材整理
@@ -317,8 +317,8 @@ python main.py --workspace trial_if_lowmem -O --test --save_mesh
 ### 5.2 截图素材
 
 - [x] 已生成 3 组基础截图素材
-- [ ] 需要把最终用于报告的截图复制到 `./docs/report/exp3/screenshots/`
-- [ ] 如需突出最佳结果，建议补导出 4.6 的截图素材
+- [ ] 需要将最终用于报告的截图复制到 `./docs/report/exp3/screenshots/`
+- [ ] 如需突出最佳结果，建议补充导出 4.6 的截图素材
 
 现有截图目录：
 
@@ -389,8 +389,8 @@ python ./scripts/extract_video_screenshots.py ./trial_if_tiger_no_perpneg_64/res
 推荐结论：
 
 - 基础三组中，`trial_if_lr3e4` 相比低显存基线略有改进，但提升有限。
-- 真正最强的正向结果来自 4.6，即文档命名 `trial_if_tiger_no_perpneg_64`。
-- 4.5 与 4.6 的直接对比说明：对于该提示词，移除 `perpneg` 比继续加强负向约束更有效。
+- 最强的正向结果来自 4.6，即文档命名 `trial_if_tiger_no_perpneg_64`。
+- 4.5 与 4.6 的直接对比说明：对于该提示词，移除 `perpneg` 比继续增强负向约束更有效。
 
 ## 8. 后续仅需补充的素材与文档
 
